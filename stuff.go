@@ -11,16 +11,22 @@ type Card struct {
 	rank int
 }
 
+type CardSet struct {
+	cards []Card
+}
+
+func emptyCardSet() CardSet {
+	empty := CardSet{}
+
+	return empty
+}
+
 type HoleCards struct {
 	cardset CardSet
 }
 
 type Deck struct {
 	cardset CardSet
-}
-
-type CardSet struct {
-	cards []Card
 }
 
 type Community struct {
@@ -31,11 +37,16 @@ type Player struct {
 	name           string
 	nextPlayer     *Player
 	previousPlayer *Player
+	holeCards	   HoleCards
 }
 
 // Player constructor
 func NewPlayer(name string) Player {
-	newPlayer := Player{name, nil, nil}
+	ecs := emptyCardSet()
+	hc := HoleCards{cardset: ecs}
+
+	newPlayer := Player{name, nil, nil, hc}
+	//newPlayer := Player{name, nil, nil, nil}
 	return newPlayer
 }
 
@@ -54,6 +65,8 @@ type Table struct {
 	bigBlindPlayer   Player
 	gameCtr          int
 	bettingRound     string
+	deck			 Deck
+	pot				 Pot
 }
 
 func (t *Table) initialize() {
@@ -122,8 +135,8 @@ func runTournament() {
 	var p1 Player
 	p1.name = "Bert"
 	table.addPlayer(p1)                       // way #1
-	table.addPlayer(Player{"Cail", nil, nil}) // way #2
-	table.addPlayer(Player{"Dale", nil, nil})
+	table.addPlayer(NewPlayer("Cail"))
+	table.addPlayer(NewPlayer("Dale"))
 	table.addPlayer(NewPlayer("Eyor")) // way #3
 	table.printPlayerList()
 
