@@ -2,8 +2,8 @@ package main
 
 import (
 	"fmt"
-	"time"
 	"math/rand"
+	"time"
 )
 
 type Card struct {
@@ -38,7 +38,6 @@ func NewPlayer(name string) Player {
 	newPlayer := Player{name, nil, nil}
 	return newPlayer
 }
-
 
 type Pot struct {
 	value int
