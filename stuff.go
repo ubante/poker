@@ -50,6 +50,7 @@ func NewPlayer(name string) Player {
 	return newPlayer
 }
 
+
 type Pot struct {
 	value int
 }
@@ -80,14 +81,34 @@ func (t *Table) addPlayer(player Player) {
 	}
 
 	lastPlayer := t.players[len(t.players)-1]
+
 	lastPlayer.nextPlayer = &player
 	player.previousPlayer = &lastPlayer
 	player.nextPlayer = &t.players[0]
 	t.players[0].previousPlayer = &player
+
 	t.players = append(t.players, player)
 
-	fmt.Printf("%s is after %s and before %s\n",
-		player.name, player.previousPlayer.name, player.nextPlayer.name)
+	//fmt.Printf("previous player is %s\n", lastPlayer.name)
+	//fmt.Printf("this player is %s\n", player.name)
+	//fmt.Printf("next player is %s\n", t.players[0].name)
+	//
+	//fmt.Printf("next player's previous player is %s\n", t.players[0].previousPlayer.name)
+	//fmt.Printf("previous player's next player is %s\n", lastPlayer.nextPlayer.name)
+
+	// panic: runtime error: invalid memory address or nil pointer dereference
+	//fmt.Printf("next player's next player is %s\n", t.players[0].nextPlayer.name)
+	//fmt.Printf("previous player's previous player is %s\n", lastPlayer.previousPlayer.name)
+
+	//fmt.Printf("%s is after %s and before %s\n",
+	//	player.name, player.previousPlayer.name, player.nextPlayer.name)
+
+	//fmt.Printf("PREVIOUS PLAYER: %s > %s > %s\n",
+	//	lastPlayer.previousPlayer.name, lastPlayer.name, lastPlayer.nextPlayer.name)
+	fmt.Printf("CURRENT PLAYER: %s > %s > %s\n",
+		player.previousPlayer.name, player.name, player.nextPlayer.name)
+	//fmt.Printf("NEXT PLAYER: %s > %s > %s\n",
+	//	t.players[0].previousPlayer.name, t.players[0].name, t.players[0].nextPlayer.name)
 	return
 }
 
@@ -102,6 +123,24 @@ func (t Table) printPlayerList() {
 	for _, p := range t.players {
 		fmt.Println(p.name)
 	}
+}
+
+func (t Table) printLinkList(reverse bool, p *Player) {
+	// the zero value of a bool is false
+
+	if p == nil {
+		p = &t.players[0]
+		fmt.Printf("%s -> ", p.name)
+	}
+
+	// recursively print the player list
+	if p.nextPlayer == &t.players[0] {
+		return
+	}
+
+	time.Sleep(1)
+	t.printLinkList(reverse, p.nextPlayer)
+	return
 }
 
 func (t *Table) assignButton() {
@@ -138,10 +177,12 @@ func runTournament() {
 	table.addPlayer(NewPlayer("Dale"))
 	table.addPlayer(NewPlayer("Eyor")) // way #3
 	table.printPlayerList()
+	table.printLinkList(false, nil)
+	fmt.Println("\n")
 
 	// Set an initial small blind value.
-	table.assignButton()
-	table.defineBlinds(25)
+	//table.assignButton()
+	//table.defineBlinds(25)
 
 	for i := 1; i <= 2; i++ {
 		fmt.Printf("This is game #%d.\n", table.gameCtr)
