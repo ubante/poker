@@ -5,6 +5,9 @@ import (
 	"math/rand"
 	"time"
 	"strconv"
+
+	//"src/goven/poker/players"
+	//"./players"
 )
 
 type Card struct {
@@ -88,6 +91,18 @@ func (cs *CardSet) add(c Card) {
 	cs.cards = append(cs.cards, &c)
 }
 
+/*
+I couldn't find a pop function - weird.
+https://groups.google.com/forum/#!topic/Golang-nuts/obZI4uyZTe0
+ */
+func (cs *CardSet) pop() *Card {
+	card := cs.cards[0]
+	copy(cs.cards, cs.cards[1:])
+	cs.cards = cs.cards[:len(cs.cards)-1]
+
+	return card
+}
+
 func (cs *CardSet) shuffle() {
 	rand.Shuffle(cs.length(), func(i, j int) {
 		cs.cards[i], cs.cards[j] = cs.cards[j], cs.cards[i]
@@ -105,7 +120,24 @@ func getEmptyCardSet() CardSet {
 }
 
 type HoleCards struct {
-	cardset CardSet
+	cardset *CardSet
+}
+
+func (hc *HoleCards) toString() string {
+	return hc.cardset.getStatus()
+}
+
+func (hc *HoleCards) add(c Card) {
+	hc.cardset.add(c)
+}
+
+// This doesn't work.
+// https://golang.org/pkg/fmt/
+// In above, search for "If an operand implements method String() string"
+func (hc *HoleCards) String() string {
+	//fmt.Println("XXXXXXXXXXXXXXXXXXXXXXX")
+	//return "banana"
+	return hc.cardset.getStatus()
 }
 
 type Deck struct {
@@ -132,7 +164,7 @@ func NewDeck() *Deck {
 }
 
 func (d *Deck) getStatus() string {
-	status := ""
+	status := fmt.Sprintf("Deck has %d cards:\n", len(d.cardset.cards))
 	for i, card := range d.cardset.cards {
 		if i != 0 && i % 13 == 0 {
 			status += "\n"
@@ -152,9 +184,18 @@ func (d *Deck) shuffle() {
 	d.cardset.shuffle()
 }
 
+func (d *Deck) getCard() *Card {
+	return d.cardset.pop()
+}
+
 type Community struct {
 	cards []Card
 }
+
+type Pot struct {
+	value int
+}
+
 
 type Player struct {
 	name           string
@@ -162,17 +203,16 @@ type Player struct {
 	previousPlayer *Player
 
 	// The below get reset after each game.
-	holeCards	   HoleCards
-	stack		   int
-	bet            int
-	hasFolded      bool
-	isAllIn        bool
+	holeCards HoleCards
+	stack     int
+	bet       int
+	hasFolded bool
+	isAllIn   bool
 }
 
 func (p *Player) getStatus() string {
 	status := ""
-	status = fmt.Sprintf("%s: (%s/%s) stack=%d bet=%d", p.name, p.previousPlayer.name, p.nextPlayer.name,
-		p.stack, p.bet)
+	status = fmt.Sprintf("%s: [%s] stack=%d bet=%d", p.name, p.holeCards.toString(), p.stack, p.bet)
 
 	return status
 }
@@ -196,17 +236,12 @@ func (p *Player) allIn() {
 // http://www.golangpatterns.info/object-oriented/constructors
 func NewPlayer(name string) Player {
 	ecs := getEmptyCardSet()
-	hc := HoleCards{cardset: ecs}
-	initialStack := 1000  // dollars
+	hc := HoleCards{cardset: &ecs}
+	initialStack := 1000 // dollars
 	newPlayer := Player{name, nil, nil, hc, initialStack, 0,
-	false, false}
+		false, false}
 	return newPlayer
 }
-
-type Pot struct {
-	value int
-}
-
 /**
 This breaks my brain.
  */
@@ -336,18 +371,25 @@ func (t *Table) defineBlinds(sb int) {
 
 func (t *Table) postBlinds() (table Table) {
 	t.bigBlindPlayer.payBlind(t.bigBlindValue)
-	fmt.Println(t.bigBlindPlayer.name, "just bet the blind of $", t.bigBlindPlayer.bet, "and has $",
+	fmt.Println(t.bigBlindPlayer.name, "just paid the blind of $", t.bigBlindPlayer.bet, "and has $",
 		t.bigBlindPlayer.stack, "left.")
 
 	t.smallBlindPlayer.payBlind(t.smallBlindValue)
-	fmt.Println(t.smallBlindPlayer.name, "just bet the blind of $", t.smallBlindPlayer.bet, "and has $",
+	fmt.Println(t.smallBlindPlayer.name, "just paid the blind of $", t.smallBlindPlayer.bet, "and has $",
 		t.smallBlindPlayer.stack, "left.")
 
 	return
 }
 
 func (t *Table) dealHoleCards() {
+	for _, player := range t.players {
+		player.holeCards.add(*t.deck.getCard())  // You need two hole cards.
+		player.holeCards.add(*t.deck.getCard())
+	}
+}
 
+func (t *Table) preflopBet() {
+	// TODO: this is where I left off
 }
 
 func runTournament() {
@@ -369,13 +411,14 @@ func runTournament() {
 	table.defineBlinds(25)
 
 	for i := 1; i <= 2; i++ {
+		fmt.Println("============================")
 		table.reset()
-
 		fmt.Printf("This is game #%d.\n", table.gameCtr)
 		table.bettingRound = "PREFLOP"
 		table.postBlinds()
 		fmt.Print(table.getStatus())
 		table.dealHoleCards()
+		table.preflopBet()
 
 		table.bettingRound = "FLOP"
 
