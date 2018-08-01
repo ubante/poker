@@ -3,11 +3,10 @@ package main
 import (
 	"fmt"
 	"math/rand"
-	"time"
 	"strconv"
 
-	//"src/goven/poker/players"
-	//"./players"
+	"time"
+	"gopkg.in/inconshreveable/log15.v2"
 )
 
 type Card struct {
@@ -210,11 +209,37 @@ type Player struct {
 	isAllIn   bool
 }
 
+// Player constructor
+// http://www.golangpatterns.info/object-oriented/constructors
+func NewPlayer(name string) Player {
+	ecs := getEmptyCardSet()
+	hc := HoleCards{cardset: &ecs}
+	initialStack := 1000 // dollars
+	newPlayer := Player{name, nil, nil, hc, initialStack, 0,
+		false, false}
+	return newPlayer
+}
+
 func (p *Player) getStatus() string {
 	status := ""
 	status = fmt.Sprintf("%s: [%s] stack=%d bet=%d", p.name, p.holeCards.toString(), p.stack, p.bet)
 
 	return status
+}
+
+/*
+Reset after each game.
+
+Maybe use "prepare()" instead of "reset()" because the latter implies
+something you do afterwards.
+ */
+func (p *Player) reset() {
+	// Maybe NewPlayer can call this?
+	ecs := getEmptyCardSet()
+	p.holeCards = HoleCards{cardset: &ecs}
+	p.bet = 0
+	p.hasFolded = false
+	p.isAllIn = false
 }
 
 func (p *Player) payBlind(blindAmount int) {
@@ -232,16 +257,66 @@ func (p *Player) allIn() {
 	p.isAllIn = true
 }
 
-// Player constructor
-// http://www.golangpatterns.info/object-oriented/constructors
-func NewPlayer(name string) Player {
-	ecs := getEmptyCardSet()
-	hc := HoleCards{cardset: &ecs}
-	initialStack := 1000 // dollars
-	newPlayer := Player{name, nil, nil, hc, initialStack, 0,
-		false, false}
-	return newPlayer
+func (p *Player) checkOrCall(t *Table) {
+	return
 }
+
+func (p *Player) checkOrFold(t *Table) {
+	return
+}
+
+func (p *Player) chooseActionPreflop(t *Table) {
+	fmt.Println("Using the default preflop action of check-calling")
+	p.checkOrCall(t)
+
+	return
+}
+
+func (p *Player) chooseActionFlop(t *Table) {
+	fmt.Println("Using the default flop action of check-folding")
+	p.checkOrFold(t)
+
+	return
+}
+
+func (p *Player) chooseActionTurn(t *Table) {
+	fmt.Println("Using the default turn action of check-folding")
+	p.checkOrFold(t)
+
+	return
+}
+
+func (p *Player) chooseActionRiver(t *Table) {
+	fmt.Println("Using the default river action of check-folding")
+	p.checkOrFold(t)
+
+	return
+}
+
+func (p *Player) chooseAction(t *Table) {
+
+	// This is handled by Table() but be redundant for clearness.
+	if p.hasFolded {
+		fmt.Println("I,", p.name, "have already folded so no action.")
+		return
+	}
+	if p.isAllIn {
+		fmt.Println("I,", p.name, "am all in so no action.")
+		return
+	}
+
+	fmt.Println(p.getStatus())
+	fmt.Println("what to do?")
+
+	switch t.bettingRound {
+	case "PREFLOP": p.chooseActionPreflop(t)
+	case "FLOP": p.chooseActionFlop(t)
+	case "TURN": p.chooseActionTurn(t)
+	case "RIVER": p.chooseActionRiver(t)
+	}
+	return
+}
+
 /**
 This breaks my brain.
  */
@@ -276,16 +351,24 @@ This happens at the start of tournaments.
  */
 func (t *Table) initialize() {
 	t.gameCtr = 0
+
+	// https://stackoverflow.com/questions/33994677/pick-a-random-value-from-a-go-slice
+	rand.Seed(time.Now().Unix())
 }
 
 /*
 This happens at the start of games.
+
+Maybe use "prepare()" instead of "reset()" because the latter implies
+something you do afterwards.
  */
 func (t *Table) reset() {
 	t.gameCtr++
 
 	t.deck = NewDeck()
 	t.deck.shuffle()
+
+
 }
 
 //   receiver   name      inputs         return type
@@ -352,8 +435,6 @@ func (t Table) printLinkList(reverse bool, p *Player) {
 }
 
 func (t *Table) assignInitialButtonAndBlinds() {
-	// https://stackoverflow.com/questions/33994677/pick-a-random-value-from-a-go-slice
-	rand.Seed(time.Now().Unix())
 	n := rand.Int() % len(t.players)
 	t.button = *t.players[n]
 	fmt.Println("Assigning the button to:", t.button.name)
@@ -388,8 +469,33 @@ func (t *Table) dealHoleCards() {
 	}
 }
 
+func (t *Table) getPlayerAction(player *Player) {
+	if player.hasFolded {
+		fmt.Println(player.name, "has folded so no action.")
+		return
+	}
+
+	if player.isAllIn {
+		fmt.Println(player.name, "is all-in so no action.")
+		return
+	}
+
+	fmt.Println(player.name, "has action - finding it.")
+	player.chooseAction(t)
+
+	return
+}
+
 func (t *Table) preflopBet() {
 	// TODO: this is where I left off
+	firstBetter := t.bigBlindPlayer.nextPlayer
+	fmt.Println("The first better is", firstBetter.name)
+	log15.Info("The first better is", firstBetter.name)
+
+	better := firstBetter
+	t.getPlayerAction(better)
+	better = better.nextPlayer
+
 }
 
 func runTournament() {
@@ -400,18 +506,19 @@ func runTournament() {
 	table.addPlayer(NewPlayer("Bert"))
 	table.addPlayer(NewPlayer("Cail"))
 	table.addPlayer(NewPlayer("Dale"))
-	table.addPlayer(NewPlayer("Eyor")) // way #3
+	table.addPlayer(NewPlayer("Eyor"))
 	table.printPlayerList()
 	table.printLinkList(false, nil)
 	table.printLinkList(true, nil)
 	fmt.Print("\n\n")
 
 	// Set an initial small blind value.
-	table.assignInitialButtonAndBlinds()
+	//table.assignInitialButtonAndBlinds()
 	table.defineBlinds(25)
 
 	for i := 1; i <= 2; i++ {
 		fmt.Println("============================")
+		table.assignInitialButtonAndBlinds()
 		table.reset()
 		fmt.Printf("This is game #%d.\n", table.gameCtr)
 		table.bettingRound = "PREFLOP"
