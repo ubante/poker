@@ -98,6 +98,15 @@ func (cs *CardSet) add(c Card) {
 }
 
 /*
+This will accept a cardset and combine it with this.
+ */
+func (cs *CardSet) combine(cs2 CardSet) {
+	for _, card := range cs2.cards {
+		cs.add(*card)
+	}
+}
+
+/*
 I couldn't find a pop function - weird.
 https://groups.google.com/forum/#!topic/Golang-nuts/obZI4uyZTe0
  */
@@ -591,9 +600,29 @@ func (t *Table) getPlayerAction(player *Player) {
 	return
 }
 
-func (t *Table) preflopBet() {
-	// TODO: this is where I left off
-	firstBetter := t.bigBlindPlayer.nextPlayer
+/*
+Return false unless all non folded players either have the same bet or
+are all-in.
+ */
+func (t *Table) checkBetParity() bool {
+	maxBet := t.getMaxBet()
+	for _, p := range t.players {
+		if p.hasFolded || p.isAllIn {
+			continue
+		}
+
+		if p.bet != maxBet {
+			fmt.Println(p.name, "needs to take action.  Current bet is $", p.bet, "which is less than the max " +
+				"bet of $", maxBet)
+			return false
+		}
+	}
+
+	return true
+}
+
+func (t *Table) genericBet(firstBetter *Player) {
+	//firstBetter := t.bigBlindPlayer.nextPlayer
 	fmt.Println("The first better is", firstBetter.name)
 	log15.Info("The first better is", firstBetter.name)
 
@@ -601,6 +630,7 @@ func (t *Table) preflopBet() {
 	t.getPlayerAction(better)
 	better = better.nextPlayer
 
+	// First go around the table.
 	for better != firstBetter {
 		fmt.Println(better.name, "is the better.")
 
@@ -615,6 +645,35 @@ func (t *Table) preflopBet() {
 
 	fmt.Println("After going around the table once, we have:")
 	fmt.Println(t.getStatus())
+
+	// There may be raises and re-raises so handle that.
+	for {
+		if t.checkForOnePlayer() {
+			return
+		}
+
+		// These players have no action.
+		if better.hasFolded || better.isAllIn {
+			continue
+		}
+
+		if t.checkBetParity() {
+			fmt.Println("Everyone had a chance to bet and everyone is all-in, has folded or has called.")
+			break
+		}
+
+		t.getPlayerAction(better)
+		better = better.nextPlayer
+	}
+}
+
+func (t *Table) preFlopBet() {
+	firstBetter := t.bigBlindPlayer.nextPlayer
+	t.genericBet(firstBetter)
+}
+
+func (t *Table) postPreFlopBet() {
+	t.genericBet(t.smallBlindPlayer)
 }
 
 func (t *Table) countFoldedPlayers() {
@@ -640,10 +699,27 @@ func (t *Table) moveBetsToPot() {
 }
 
 func (t *Table) dealFlop() {
+	t.bettingRound = "FLOP"
 	for i := 1; i <= 3; i++ {
 		card := t.deck.getCard()
 		t.community.add(*card)
 	}
+}
+
+func (t *Table) dealTurn() {
+	t.bettingRound = "TURN"
+	card := t.deck.getCard()
+	t.community.add(*card)
+}
+
+func (t *Table) dealRiver() {
+	t.bettingRound = "RIVER"
+	card := t.deck.getCard()
+	t.community.add(*card)
+}
+
+func (t *Table) payWinners() {
+
 }
 
 func runTournament() {
@@ -673,13 +749,23 @@ func runTournament() {
 		table.postBlinds()
 		fmt.Print(table.getStatus())
 		table.dealHoleCards()
-		table.preflopBet()
+		table.preFlopBet()
 		table.moveBetsToPot()
 		fmt.Println(table.getStatus())
 
 		fmt.Println("Dealing the flop.")
-		table.bettingRound = "FLOP"
 		table.dealFlop()
+		table.postPreFlopBet()
+		fmt.Println(table.getStatus())
+
+		fmt.Println("Dealing the turn.")
+		table.dealTurn()
+		table.postPreFlopBet()
+		fmt.Println(table.getStatus())
+
+		fmt.Println("Dealing the river.")
+		table.dealRiver()
+		table.postPreFlopBet()
 		fmt.Println(table.getStatus())
 
 	}
