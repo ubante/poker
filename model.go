@@ -72,6 +72,13 @@ func NewCardSet(cards ...Card) CardSet {
 }
 
 func (cs *CardSet) getStatus() string {
+	//fmt.Println(cs)
+	//fmt.Println(cs.cards)
+
+	//if len(cs.cards) == 0 {
+	//	return ""
+	//}
+
 	var status string
 
 	for _, c := range cs.cards {
@@ -112,6 +119,7 @@ func (cs CardSet) length() int {
 	return len(cs.cards)
 }
 
+// This should be a CardSet method.
 func getEmptyCardSet() CardSet {
 	empty := CardSet{}
 
@@ -128,6 +136,12 @@ func (hc *HoleCards) toString() string {
 
 func (hc *HoleCards) add(c Card) {
 	hc.cardset.add(c)
+}
+
+// Maybe call this hc.reset() and it can be used in more than one place.
+func (hc *HoleCards) toss() {
+	ecs := getEmptyCardSet()
+	hc.cardset = &ecs
 }
 
 // This doesn't work.
@@ -187,21 +201,56 @@ func (d *Deck) getCard() *Card {
 	return d.cardset.pop()
 }
 
+// Maybe I can get away with just using a CardSet instead of this
+// struct.
 type Community struct {
-	cards []Card
+	cards *CardSet
+}
+
+func NewCommunity() Community {
+	ecs := getEmptyCardSet()
+
+	var c Community
+	c.cards = &ecs
+
+	return c
+}
+
+// My first String().  Will eventually replace all the getStatus()
+// methods.
+func (c Community) String() string {
+	return c.cards.getStatus()
+}
+
+func (c *Community) add(card Card) {
+	c.cards.add(card)
 }
 
 type Pot struct {
-	value int
+	value int  // This could be gotten from summing equity.
+	equity map[*Player]int
 }
 
+func NewPot() Pot {
+	var pot Pot
+
+	pot.value = 0
+	pot.equity = make(map[*Player]int)
+
+	return pot
+}
+
+func (p *Pot) addEquity(playerBet int, player *Player) {
+	p.value += playerBet
+	p.equity[player] += playerBet
+}
 
 type Player struct {
 	name           string
 	nextPlayer     *Player
 	previousPlayer *Player
 
-	// The below get reset after each game.
+	// The below get preset after each game.
 	holeCards HoleCards
 	stack     int
 	bet       int
@@ -227,13 +276,17 @@ func (p *Player) getStatus() string {
 	return status
 }
 
-/*
-Reset after each game.
+func (p Player) String() string {
+	return fmt.Sprintf("%s: [%s] $%d/$%d", p.name, p.holeCards.toString(), p.bet, p.stack)
+}
 
-Maybe use "prepare()" instead of "reset()" because the latter implies
+/*
+Preset before each game.
+
+Maybe use "prepare()" instead of "preset()" because the latter implies
 something you do afterwards.
  */
-func (p *Player) reset() {
+func (p *Player) preset() {
 	// Maybe NewPlayer can call this?
 	ecs := getEmptyCardSet()
 	p.holeCards = HoleCards{cardset: &ecs}
@@ -251,6 +304,34 @@ func (p *Player) payBlind(blindAmount int) {
 	}
 }
 
+func (p *Player) check(t *Table) {
+	// This may one day do something.
+
+	return
+}
+
+func (p *Player) call(t *Table) {
+	maxBet := t.getMaxBet()
+	increase := maxBet - p.bet
+	stackBefore := p.stack
+	betBefore := p.bet
+
+	if increase >= p.stack {
+		p.allIn()
+	} else {
+		p.bet = maxBet
+		p.stack -= increase
+	}
+
+	fmt.Println("calling - max bet:", maxBet, "increase:", increase, "bet before/after: ", betBefore, "/",
+		p.bet, ", stack before/after:", stackBefore, "/", p.stack)
+}
+
+func (p *Player) fold() {
+	p.hasFolded = true
+	p.holeCards.toss()
+}
+
 func (p *Player) allIn() {
 	p.bet += p.stack
 	p.stack = 0
@@ -258,6 +339,13 @@ func (p *Player) allIn() {
 }
 
 func (p *Player) checkOrCall(t *Table) {
+	if t.getMaxBet() == 0 {
+		p.check(t)
+		return
+	}
+
+	p.call(t)
+
 	return
 }
 
@@ -306,7 +394,6 @@ func (p *Player) chooseAction(t *Table) {
 	}
 
 	fmt.Println(p.getStatus())
-	fmt.Println("what to do?")
 
 	switch t.bettingRound {
 	case "PREFLOP": p.chooseActionPreflop(t)
@@ -324,7 +411,7 @@ type Table struct {
 	players          []*Player
 	gameCtr          int
 
-	// The below get reset after each game.
+	// The below get preset before each game.
 	community        Community
 	button           Player
 	smallBlindValue  int
@@ -337,12 +424,16 @@ type Table struct {
 }
 
 func (t *Table) getStatus() string {
-	status := "------"
-	status = fmt.Sprintf("%d players\n", len(t.players))
+	status := "------\n"
+	status += fmt.Sprintf("%d players\n", len(t.players))
 
 	for _, player := range t.players {
-		status += fmt.Sprintf("%s: $%d ($%d)\n", player.name, player.stack, player.bet)
+		status += fmt.Sprintf("%s\n", player)
 	}
+
+	status += fmt.Sprintf("Pot: %d\n", t.pot.value)
+	status += fmt.Sprintf("Community: %s\n", t.community)
+	status += "------\n"
 	return status
 }
 
@@ -358,16 +449,18 @@ func (t *Table) initialize() {
 
 /*
 This happens at the start of games.
-
-Maybe use "prepare()" instead of "reset()" because the latter implies
-something you do afterwards.
  */
-func (t *Table) reset() {
+func (t *Table) preset() {
 	t.gameCtr++
 
 	t.deck = NewDeck()
 	t.deck.shuffle()
+	t.pot = NewPot()
+	t.community = NewCommunity()
 
+	for _, p := range t.players{
+		p.preset()
+	}
 
 }
 
@@ -469,6 +562,18 @@ func (t *Table) dealHoleCards() {
 	}
 }
 
+func (t *Table) getMaxBet() int {
+	maxBet := 0
+
+	for _, player := range t.players {
+		if player.bet > maxBet {
+			maxBet = player.bet
+		}
+	}
+
+	return maxBet
+}
+
 func (t *Table) getPlayerAction(player *Player) {
 	if player.hasFolded {
 		fmt.Println(player.name, "has folded so no action.")
@@ -496,6 +601,49 @@ func (t *Table) preflopBet() {
 	t.getPlayerAction(better)
 	better = better.nextPlayer
 
+	for better != firstBetter {
+		fmt.Println(better.name, "is the better.")
+
+		if t.checkForOnePlayer() {
+			fmt.Println("We are down to one player.")
+			return
+		}
+
+		t.getPlayerAction(better)
+		better = better.nextPlayer
+	}
+
+	fmt.Println("After going around the table once, we have:")
+	fmt.Println(t.getStatus())
+}
+
+func (t *Table) countFoldedPlayers() {
+
+}
+
+func (t *Table) checkForOnePlayer() bool {
+	remaingPlayerCount := len(t.players)
+	if remaingPlayerCount > 1 {
+		return false
+	}
+
+	return true
+}
+
+func (t *Table) moveBetsToPot() {
+	fmt.Println("Moving bets to pot.")
+	for _, p := range t.players {
+		fmt.Println(p.name, "had bet $", p.bet)
+		t.pot.addEquity(p.bet, p)
+		p.bet = 0
+	}
+}
+
+func (t *Table) dealFlop() {
+	for i := 1; i <= 3; i++ {
+		card := t.deck.getCard()
+		t.community.add(*card)
+	}
 }
 
 func runTournament() {
@@ -519,15 +667,20 @@ func runTournament() {
 	for i := 1; i <= 2; i++ {
 		fmt.Println("============================")
 		table.assignInitialButtonAndBlinds()
-		table.reset()
+		table.preset()
 		fmt.Printf("This is game #%d.\n", table.gameCtr)
 		table.bettingRound = "PREFLOP"
 		table.postBlinds()
 		fmt.Print(table.getStatus())
 		table.dealHoleCards()
 		table.preflopBet()
+		table.moveBetsToPot()
+		fmt.Println(table.getStatus())
 
+		fmt.Println("Dealing the flop.")
 		table.bettingRound = "FLOP"
+		table.dealFlop()
+		fmt.Println(table.getStatus())
 
 	}
 }

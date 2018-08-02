@@ -8,7 +8,7 @@ package main
 //	nextPlayer     *Player
 //	previousPlayer *Player
 //
-//	// The below get reset after each game.
+//	// The below get preset after each game.
 //	holeCards HoleCards
 //	stack     int
 //	bet       int
