@@ -291,9 +291,7 @@ func (p Pot) String() string {
 	toString := fmt.Sprintf("POT is $%d\n", p.value)
 
 	for player, value := range p.equity {
-		//toString += fmt.Sprintf("Pot has $%d", p.value)
 		toString += fmt.Sprintf("%s has equity: $%d\n", player.name, value)
-		//toString += fmt.Sprintf("%s: %d", player, p.equity[player])
 	}
 
 	return toString

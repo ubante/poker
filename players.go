@@ -1,6 +1,27 @@
 package main
 
-// I fail at imports.
+import "fmt"
+
+type FoldingPlayer struct {
+	Player
+}
+
+func NewFoldingPlayer(name string) FoldingPlayer {
+	ecs := getEmptyCardSet()
+	hc := HoleCards{cardset: &ecs}
+	initialStack := 1000 // dollars
+	newPlayer := FoldingPlayer{Player{name, nil, nil, hc, initialStack, 0,
+		false, false}}
+	return newPlayer
+}
+
+func main() {
+	fmt.Println("Players playas")
+
+	fp := NewFoldingPlayer("Fernie")
+
+	fmt.Println(fp)
+}
 
 //
 //type Player struct {
