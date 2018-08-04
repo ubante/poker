@@ -71,26 +71,19 @@ func NewCardSet(cards ...Card) CardSet {
 	return cs
 }
 
-func (cs *CardSet) getStatus() string {
-	//fmt.Println(cs)
-	//fmt.Println(cs.cards)
-
-	//if len(cs.cards) == 0 {
-	//	return ""
-	//}
-
-	var status string
+func (cs CardSet) String() string {
+	var toString string
 
 	for _, c := range cs.cards {
-		if status == "" {
-			status = c.getStatus()
+		if toString == "" {
+			toString = c.getStatus()
 			continue
 		}
 
-		status += fmt.Sprintf(" %s", c.getStatus())
+		toString += fmt.Sprintf(" %s", c.getStatus())
 	}
 
-	return status
+	return toString
 }
 
 func (cs *CardSet) add(c Card) {
@@ -135,12 +128,61 @@ func getEmptyCardSet() CardSet {
 	return empty
 }
 
+/*
+Not sure this should be a struct.
+
+Primary ranks are:
+  9: Straight flush
+  8: Four of a kind
+  7: Full house
+  6: Flush
+  5: Straight
+  4: Three of a kind
+  3: Two pair
+  2: One pair
+  1: High card
+
+Secondary ranks vary with the primary rank.  For example,  for
+a straight, the secondary rank will be the highest card.  For
+a full house, the secondary rank will be the numeric value of
+the three of a kind.
+
+Tertiary rank also vary's with the primary rank.  For a flush,
+this would be the second highest card.  For a full house, this
+would be the numeric value of the pair.
+
+This just goes on and on.  For a flush and high card, it is
+possible to have a rank for each of the five cards.  For the
+other types of hands, these will remain at zero.
+ */
+type Evaluation struct {
+	cardSet *CardSet
+	humanEval string
+	allRanks []string
+}
+
+func NewEvaluation() *Evaluation {
+	var eval Evaluation
+	ecs := getEmptyCardSet()
+	eval.cardSet = &ecs
+
+	return &eval
+}
+
+func (e Evaluation) String() string {
+	toString := fmt.Sprint("%s: %s with ranks: [TBD]", e.cardSet, e.humanEval)
+
+
+
+	return toString
+}
+
 type HoleCards struct {
 	cardset *CardSet
 }
 
 func (hc *HoleCards) toString() string {
-	return hc.cardset.getStatus()
+	return hc.cardset.String()
 }
 
 func (hc *HoleCards) add(c Card) {
@@ -153,13 +195,8 @@ func (hc *HoleCards) toss() {
 	hc.cardset = &ecs
 }
 
-// This doesn't work.
-// https://golang.org/pkg/fmt/
-// In above, search for "If an operand implements method String() string"
-func (hc *HoleCards) String() string {
-	//fmt.Println("XXXXXXXXXXXXXXXXXXXXXXX")
-	//return "banana"
-	return hc.cardset.getStatus()
+func (hc HoleCards) String() string {
+	return hc.cardset.String()
 }
 
 type Deck struct {
@@ -228,7 +265,8 @@ func NewCommunity() Community {
 // My first String().  Will eventually replace all the getStatus()
 // methods.
 func (c Community) String() string {
-	return c.cards.getStatus()
+	return c.cards.String()
+	//return c.cards.getStatus()
 }
 
 func (c *Community) add(card Card) {
@@ -247,6 +285,18 @@ func NewPot() Pot {
 	pot.equity = make(map[*Player]int)
 
 	return pot
+}
+
+func (p Pot) String() string {
+	toString := fmt.Sprintf("POT is $%d\n", p.value)
+
+	for player, value := range p.equity {
+		//toString += fmt.Sprintf("Pot has $%d", p.value)
+		toString += fmt.Sprintf("%s has equity: $%d\n", player.name, value)
+		//toString += fmt.Sprintf("%s: %d", player, p.equity[player])
+	}
+
+	return toString
 }
 
 func (p *Pot) addEquity(playerBet int, player *Player) {
@@ -719,7 +769,8 @@ func (t *Table) dealRiver() {
 }
 
 func (t *Table) payWinners() {
-
+	// just one player for now
+	fmt.Println("The pot:", t.pot)
 }
 
 func runTournament() {
@@ -768,7 +819,11 @@ func runTournament() {
 		table.postPreFlopBet()
 		fmt.Println(table.getStatus())
 
+		fmt.Println("Finding and paying the winners.")
+		table.payWinners()
 	}
+
+
 }
 
 /*
@@ -785,6 +840,10 @@ func main() {
 	//card2 := NewCard("S", 4)
 	//cardSet.add(card2)
 	//fmt.Println(cardSet.getStatus())
+	//fmt.Println(cardSet)
+
+
+
 	//for numericRank := range [13]int{} {
 	//	newCard := NewCard("D", numericRank+2)
 	//	//fmt.Println("New card:", newCard)
@@ -801,5 +860,7 @@ func main() {
 	for i := 1; i <= 1; i++ {
 		runTournament()
 	}
+
+
 
 }
