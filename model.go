@@ -273,6 +273,39 @@ func (c *Community) add(card Card) {
 	c.cards.add(card)
 }
 
+/*
+In live poker, there can be multiple pots when someone goes in but
+there's still action on the table.
+
+Here, we will have one pot, the main pot.  But we'll keep track of
+each players equity.  Once the game is complete, we'll segment the
+pot.  Using the equity, we know how much of the pot is split across
+all players.  This is the first segment.  And how much of the pot is
+split across all-1 players.  This is the second segment.  This will
+continue until all equity is accounted for.
+
+For each segment, we'll find take the involved players and find who
+has the best hand and that player will get that segment of the pot.
+Folded players will have dead hands so their equity remains in the
+pot but their hand cannot win.
+
+If all players have equal equity, then there will be one segment
+and the player with the best hand gets the whole pot.
+
+For example, if one player goes all in and everyone else calls
+without going all in themselves, and there is no further betting,
+then each player has equal equity and we still have one segment.
+
+For another example, if PlayerA goes all on the flop and everyone
+folds except PlayerB and PlayerC.  Those two players call.  Then
+on the turn, they check-check.  Then on the river, they raise-call,
+then we have two segments.  The first segment are for exactly the
+three remaining players.  The second segment is just for PlayerB
+and PlayerC.
+
+Note that bets do not enter a pot until all betting is complete for
+the round.
+ */
 type Pot struct {
 	value int  // This could be gotten from summing equity.
 	equity map[*Player]int
@@ -300,6 +333,55 @@ func (p Pot) String() string {
 func (p *Pot) addEquity(playerBet int, player *Player) {
 	p.value += playerBet
 	p.equity[player] += playerBet
+}
+
+func (p *Pot) getSegments() map[int][]*Player {
+	//fmt.Println("segments wooo hoo")
+
+	// First invert the map.
+	invertedMap := make(map[int][]*Player)
+	for player, equity := range p.equity {
+		invertedMap[equity] = append(invertedMap[equity], player)
+	}
+
+	// Then sort the values of equity.  Note that this also removes
+	// duplicate values.
+	var sortedEquity []int
+	for eq := range invertedMap {
+		sortedEquity = append(sortedEquity, eq)
+	}
+
+	// Loop through the equities and create the reverse map.
+	segments := make(map[int][]*Player)
+	for _, equity := range sortedEquity {
+		fmt.Printf("$%d: \n", equity)
+		for _, player := range invertedMap[equity] {
+			fmt.Printf("    %s\n", player.name)
+			segments[equity] = append(segments[equity], player)
+		}
+		fmt.Println()
+	}
+
+	//
+	//// Get all the values of the equity map.
+	//values := make([]int, len(p.equity))
+	//for _, player := range p.equity {
+	//
+	//	// We only care about unique values.
+	//	// https://stackoverflow.com/questions/9251234/go-append-if-unique
+	//	values = append(values, player)
+	//}
+	//fmt.Println(values)
+
+	//previous := 0
+
+	//fmt.Println("Returning from getSegments().")
+	return segments
+}
+
+type PlayerInterface interface {
+	fold()
+	allIn()
 }
 
 type Player struct {
@@ -461,6 +543,25 @@ func (p *Player) chooseAction(t *Table) {
 	return
 }
 
+type CallingStationPlayer struct {
+	Player
+}
+
+// Repeating the constructor is kinda lame.
+func NewCallingStationPlayer(name string) CallingStationPlayer {
+	ecs := getEmptyCardSet()
+	hc := HoleCards{cardset: &ecs}
+	initialStack := 1000 // dollars
+
+	newPlayer := new(CallingStationPlayer)
+	newPlayer.name = name
+	newPlayer.holeCards = hc
+	newPlayer.stack = initialStack
+
+	return *newPlayer
+}
+
+
 /**
 This breaks my brain.
  */
@@ -522,6 +623,7 @@ func (t *Table) preset() {
 }
 
 //   receiver   name      inputs         return type
+//func (t *Table) addPlayer(player PlayerInterface) {  # TODO this needs a lot of work.
 func (t *Table) addPlayer(player Player) {
 	if len(t.players) == 0 {
 		t.players = append(t.players, &player)
@@ -767,8 +869,18 @@ func (t *Table) dealRiver() {
 }
 
 func (t *Table) payWinners() {
-	// just one player for now
 	fmt.Println("The pot:", t.pot)
+
+	// To properly test this loop, we need different player types first.
+	for segmentAmount, segmentPlayers := range t.pot.getSegments() {
+		fmt.Printf("$%d: ", segmentAmount)
+		for _, player := range segmentPlayers {
+			fmt.Printf("%s, ", player.name)
+		}
+		fmt.Println()
+		//fmt.Println(segmentAmount, "->", segmentPlayers)
+	}
+
 }
 
 func runTournament() {
@@ -777,7 +889,7 @@ func runTournament() {
 
 	table.addPlayer(NewPlayer("Adam"))
 	table.addPlayer(NewPlayer("Bert"))
-	table.addPlayer(NewPlayer("Cail"))
+	table.addPlayer(NewCallingStationPlayer("Cail"))
 	table.addPlayer(NewPlayer("Dale"))
 	table.addPlayer(NewPlayer("Eyor"))
 	table.printPlayerList()
