@@ -308,14 +308,14 @@ the round.
  */
 type Pot struct {
 	value int  // This could be gotten from summing equity.
-	equity map[*Player]int
+	equity map[*GenericPlayer]int
 }
 
 func NewPot() Pot {
 	var pot Pot
 
 	pot.value = 0
-	pot.equity = make(map[*Player]int)
+	pot.equity = make(map[*GenericPlayer]int)
 
 	return pot
 }
@@ -330,16 +330,16 @@ func (p Pot) String() string {
 	return toString
 }
 
-func (p *Pot) addEquity(playerBet int, player *Player) {
+func (p *Pot) addEquity(playerBet int, player *GenericPlayer) {
 	p.value += playerBet
 	p.equity[player] += playerBet
 }
 
-func (p *Pot) getSegments() map[int][]*Player {
+func (p *Pot) getSegments() map[int][]*GenericPlayer {
 	//fmt.Println("segments wooo hoo")
 
 	// First invert the map.
-	invertedMap := make(map[int][]*Player)
+	invertedMap := make(map[int][]*GenericPlayer)
 	for player, equity := range p.equity {
 		invertedMap[equity] = append(invertedMap[equity], player)
 	}
@@ -352,7 +352,7 @@ func (p *Pot) getSegments() map[int][]*Player {
 	}
 
 	// Loop through the equities and create the reverse map.
-	segments := make(map[int][]*Player)
+	segments := make(map[int][]*GenericPlayer)
 	for _, equity := range sortedEquity {
 		fmt.Printf("$%d: \n", equity)
 		for _, player := range invertedMap[equity] {
@@ -379,15 +379,15 @@ func (p *Pot) getSegments() map[int][]*Player {
 	return segments
 }
 
-type PlayerInterface interface {
+type Player interface {
 	fold()
 	allIn()
 }
 
-type Player struct {
+type GenericPlayer struct {
 	name           string
-	nextPlayer     *Player
-	previousPlayer *Player
+	nextPlayer     *GenericPlayer
+	previousPlayer *GenericPlayer
 
 	// The below get preset after each game.
 	holeCards HoleCards
@@ -397,25 +397,25 @@ type Player struct {
 	isAllIn   bool
 }
 
-// Player constructor
+// GenericPlayer constructor
 // http://www.golangpatterns.info/object-oriented/constructors
-func NewPlayer(name string) Player {
+func NewPlayer(name string) GenericPlayer {
 	ecs := getEmptyCardSet()
 	hc := HoleCards{cardset: &ecs}
 	initialStack := 1000 // dollars
-	newPlayer := Player{name, nil, nil, hc, initialStack, 0,
+	newPlayer := GenericPlayer{name, nil, nil, hc, initialStack, 0,
 		false, false}
 	return newPlayer
 }
 
-func (p *Player) getStatus() string {
+func (p *GenericPlayer) getStatus() string {
 	status := ""
 	status = fmt.Sprintf("%s: [%s] stack=%d bet=%d", p.name, p.holeCards.toString(), p.stack, p.bet)
 
 	return status
 }
 
-func (p Player) String() string {
+func (p GenericPlayer) String() string {
 	return fmt.Sprintf("%s: [%s] $%d/$%d", p.name, p.holeCards.toString(), p.bet, p.stack)
 }
 
@@ -425,7 +425,7 @@ Preset before each game.
 Maybe use "prepare()" instead of "preset()" because the latter implies
 something you do afterwards.
  */
-func (p *Player) preset() {
+func (p *GenericPlayer) preset() {
 	// Maybe NewPlayer can call this?
 	ecs := getEmptyCardSet()
 	p.holeCards = HoleCards{cardset: &ecs}
@@ -434,7 +434,7 @@ func (p *Player) preset() {
 	p.isAllIn = false
 }
 
-func (p *Player) payBlind(blindAmount int) {
+func (p *GenericPlayer) payBlind(blindAmount int) {
 	if p.stack > blindAmount {
 		p.stack -= blindAmount
 		p.bet = blindAmount
@@ -443,13 +443,13 @@ func (p *Player) payBlind(blindAmount int) {
 	}
 }
 
-func (p *Player) check(t *Table) {
+func (p *GenericPlayer) check(t *Table) {
 	// This may one day do something.
 
 	return
 }
 
-func (p *Player) call(t *Table) {
+func (p *GenericPlayer) call(t *Table) {
 	maxBet := t.getMaxBet()
 	increase := maxBet - p.bet
 	stackBefore := p.stack
@@ -466,18 +466,18 @@ func (p *Player) call(t *Table) {
 		p.bet, ", stack before/after:", stackBefore, "/", p.stack)
 }
 
-func (p *Player) fold() {
+func (p *GenericPlayer) fold() {
 	p.hasFolded = true
 	p.holeCards.toss()
 }
 
-func (p *Player) allIn() {
+func (p *GenericPlayer) allIn() {
 	p.bet += p.stack
 	p.stack = 0
 	p.isAllIn = true
 }
 
-func (p *Player) checkOrCall(t *Table) {
+func (p *GenericPlayer) checkOrCall(t *Table) {
 	if t.getMaxBet() == 0 {
 		p.check(t)
 		return
@@ -488,39 +488,39 @@ func (p *Player) checkOrCall(t *Table) {
 	return
 }
 
-func (p *Player) checkOrFold(t *Table) {
+func (p *GenericPlayer) checkOrFold(t *Table) {
 	return
 }
 
-func (p *Player) chooseActionPreflop(t *Table) {
+func (p *GenericPlayer) chooseActionPreflop(t *Table) {
 	fmt.Println("Using the default preflop action of check-calling")
 	p.checkOrCall(t)
 
 	return
 }
 
-func (p *Player) chooseActionFlop(t *Table) {
+func (p *GenericPlayer) chooseActionFlop(t *Table) {
 	fmt.Println("Using the default flop action of check-folding")
 	p.checkOrFold(t)
 
 	return
 }
 
-func (p *Player) chooseActionTurn(t *Table) {
+func (p *GenericPlayer) chooseActionTurn(t *Table) {
 	fmt.Println("Using the default turn action of check-folding")
 	p.checkOrFold(t)
 
 	return
 }
 
-func (p *Player) chooseActionRiver(t *Table) {
+func (p *GenericPlayer) chooseActionRiver(t *Table) {
 	fmt.Println("Using the default river action of check-folding")
 	p.checkOrFold(t)
 
 	return
 }
 
-func (p *Player) chooseAction(t *Table) {
+func (p *GenericPlayer) chooseAction(t *Table) {
 
 	// This is handled by Table() but be redundant for clearness.
 	if p.hasFolded {
@@ -544,7 +544,7 @@ func (p *Player) chooseAction(t *Table) {
 }
 
 type CallingStationPlayer struct {
-	Player
+	GenericPlayer
 }
 
 // Repeating the constructor is kinda lame.
@@ -566,19 +566,19 @@ func NewCallingStationPlayer(name string) CallingStationPlayer {
 This breaks my brain.
  */
 type Table struct {
-	players          []*Player
+	players          []*GenericPlayer
 	gameCtr          int
 
 	// The below get preset before each game.
 	community        Community
-	button           Player
+	button           GenericPlayer
 	smallBlindValue  int
-	smallBlindPlayer *Player
+	smallBlindPlayer *GenericPlayer
 	bigBlindValue    int
-	bigBlindPlayer   *Player
+	bigBlindPlayer   *GenericPlayer
 	bettingRound     string
-	deck			 *Deck
-	pot				 Pot
+	deck             *Deck
+	pot              Pot
 }
 
 func (t *Table) getStatus() string {
@@ -624,7 +624,7 @@ func (t *Table) preset() {
 
 //   receiver   name      inputs         return type
 //func (t *Table) addPlayer(player PlayerInterface) {  # TODO this needs a lot of work.
-func (t *Table) addPlayer(player Player) {
+func (t *Table) addPlayer(player GenericPlayer) {
 	if len(t.players) == 0 {
 		t.players = append(t.players, &player)
 		return
@@ -653,7 +653,7 @@ func (t Table) printPlayerList() {
 	}
 }
 
-func (t Table) printLinkList(reverse bool, p *Player) {
+func (t Table) printLinkList(reverse bool, p *GenericPlayer) {
 	// the zero value of a bool is false
 
 	if p == nil {
@@ -733,7 +733,7 @@ func (t *Table) getMaxBet() int {
 	return maxBet
 }
 
-func (t *Table) getPlayerAction(player *Player) {
+func (t *Table) getPlayerAction(player *GenericPlayer) {
 	if player.hasFolded {
 		fmt.Println(player.name, "has folded so no action.")
 		return
@@ -771,7 +771,7 @@ func (t *Table) checkBetParity() bool {
 	return true
 }
 
-func (t *Table) genericBet(firstBetter *Player) {
+func (t *Table) genericBet(firstBetter *GenericPlayer) {
 	//firstBetter := t.bigBlindPlayer.nextPlayer
 	fmt.Println("The first better is", firstBetter.name)
 	log15.Info("The first better is", firstBetter.name)
@@ -889,7 +889,7 @@ func runTournament() {
 
 	table.addPlayer(NewPlayer("Adam"))
 	table.addPlayer(NewPlayer("Bert"))
-	table.addPlayer(NewCallingStationPlayer("Cail"))
+	//table.addPlayer(NewCallingStationPlayer("Cail"))
 	table.addPlayer(NewPlayer("Dale"))
 	table.addPlayer(NewPlayer("Eyor"))
 	table.printPlayerList()

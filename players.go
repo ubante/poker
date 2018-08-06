@@ -3,14 +3,14 @@ package main
 import "fmt"
 
 type FoldingPlayer struct {
-	Player
+	GenericPlayer
 }
 
 func NewFoldingPlayer(name string) FoldingPlayer {
 	ecs := getEmptyCardSet()
 	hc := HoleCards{cardset: &ecs}
 	initialStack := 1000 // dollars
-	newPlayer := FoldingPlayer{Player{name, nil, nil, hc, initialStack, 0,
+	newPlayer := FoldingPlayer{GenericPlayer{name, nil, nil, hc, initialStack, 0,
 		false, false}}
 	return newPlayer
 }
@@ -24,10 +24,10 @@ func main() {
 }
 
 //
-//type Player struct {
+//type GenericPlayer struct {
 //	name           string
-//	nextPlayer     *Player
-//	previousPlayer *Player
+//	nextPlayer     *GenericPlayer
+//	previousPlayer *GenericPlayer
 //
 //	// The below get preset after each game.
 //	holeCards HoleCards
@@ -37,14 +37,14 @@ func main() {
 //	isAllIn   bool
 //}
 //
-//func (p *Player) getStatus() string {
+//func (p *GenericPlayer) getStatus() string {
 //	status := ""
 //	status = fmt.Sprintf("%s: [%s] stack=%d bet=%d", p.name, p.holeCards.toString(), p.stack, p.bet)
 //
 //	return status
 //}
 //
-//func (p *Player) payBlind(blindAmount int) {
+//func (p *GenericPlayer) payBlind(blindAmount int) {
 //	if p.stack > blindAmount {
 //		p.stack -= blindAmount
 //		p.bet = blindAmount
@@ -53,19 +53,19 @@ func main() {
 //	}
 //}
 //
-//func (p *Player) allIn() {
+//func (p *GenericPlayer) allIn() {
 //	p.bet += p.stack
 //	p.stack = 0
 //	p.isAllIn = true
 //}
 //
-//// Player constructor
+//// GenericPlayer constructor
 //// http://www.golangpatterns.info/object-oriented/constructors
-//func NewPlayer(name string) Player {
+//func NewPlayer(name string) GenericPlayer {
 //	ecs := getEmptyCardSet()
 //	hc := HoleCards{cardset: &ecs}
 //	initialStack := 1000 // dollars
-//	newPlayer := Player{name, nil, nil, hc, initialStack, 0,
+//	newPlayer := GenericPlayer{name, nil, nil, hc, initialStack, 0,
 //		false, false}
 //	return newPlayer
 //}
