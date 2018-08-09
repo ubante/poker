@@ -382,6 +382,7 @@ func (p *Pot) getSegments() map[int][]*GenericPlayer {
 type Player interface {
 	fold()
 	allIn()
+	//check(t *Table)
 }
 
 type GenericPlayer struct {
@@ -566,7 +567,8 @@ func NewCallingStationPlayer(name string) CallingStationPlayer {
 This breaks my brain.
  */
 type Table struct {
-	players          []*GenericPlayer
+	//players          []*GenericPlayer
+	players          []*Player
 	gameCtr          int
 
 	// The below get preset before each game.
@@ -624,7 +626,8 @@ func (t *Table) preset() {
 
 //   receiver   name      inputs         return type
 //func (t *Table) addPlayer(player PlayerInterface) {  # TODO this needs a lot of work.
-func (t *Table) addPlayer(player GenericPlayer) {
+//func (t *Table) addPlayer(player GenericPlayer) {
+func (t *Table) addPlayer(player Player) {
 	if len(t.players) == 0 {
 		t.players = append(t.players, &player)
 		return
@@ -887,9 +890,12 @@ func runTournament() {
 	var table Table
 	table.initialize()
 
+	zubin := NewPlayer("Zubin")
+	table.addPlayer(zubin)
+
 	table.addPlayer(NewPlayer("Adam"))
 	table.addPlayer(NewPlayer("Bert"))
-	//table.addPlayer(NewCallingStationPlayer("Cail"))
+	table.addPlayer(NewCallingStationPlayer("Cail"))
 	table.addPlayer(NewPlayer("Dale"))
 	table.addPlayer(NewPlayer("Eyor"))
 	table.printPlayerList()
