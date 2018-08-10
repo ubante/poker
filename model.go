@@ -400,7 +400,7 @@ type GenericPlayer struct {
 
 // GenericPlayer constructor
 // http://www.golangpatterns.info/object-oriented/constructors
-func NewPlayer(name string) GenericPlayer {
+func NewGenericPlayer(name string) GenericPlayer {
 	ecs := getEmptyCardSet()
 	hc := HoleCards{cardset: &ecs}
 	initialStack := 1000 // dollars
@@ -427,7 +427,7 @@ Maybe use "prepare()" instead of "preset()" because the latter implies
 something you do afterwards.
  */
 func (p *GenericPlayer) preset() {
-	// Maybe NewPlayer can call this?
+	// Maybe NewGenericPlayer can call this?
 	ecs := getEmptyCardSet()
 	p.holeCards = HoleCards{cardset: &ecs}
 	p.bet = 0
@@ -567,8 +567,8 @@ func NewCallingStationPlayer(name string) CallingStationPlayer {
 This breaks my brain.
  */
 type Table struct {
-	//players          []*GenericPlayer
-	players          []*Player
+	players          []*GenericPlayer
+	//players          []*Player
 	gameCtr          int
 
 	// The below get preset before each game.
@@ -890,14 +890,14 @@ func runTournament() {
 	var table Table
 	table.initialize()
 
-	zubin := NewPlayer("Zubin")
+	zubin := NewGenericPlayer("Zubin")
 	table.addPlayer(zubin)
 
-	table.addPlayer(NewPlayer("Adam"))
-	table.addPlayer(NewPlayer("Bert"))
+	table.addPlayer(NewGenericPlayer("Adam"))
+	table.addPlayer(NewGenericPlayer("Bert"))
 	table.addPlayer(NewCallingStationPlayer("Cail"))
-	table.addPlayer(NewPlayer("Dale"))
-	table.addPlayer(NewPlayer("Eyor"))
+	table.addPlayer(NewGenericPlayer("Dale"))
+	table.addPlayer(NewGenericPlayer("Eyor"))
 	table.printPlayerList()
 	table.printLinkList(false, nil)
 	table.printLinkList(true, nil)

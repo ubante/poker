@@ -61,7 +61,7 @@ func main() {
 //
 //// GenericPlayer constructor
 //// http://www.golangpatterns.info/object-oriented/constructors
-//func NewPlayer(name string) GenericPlayer {
+//func NewGenericPlayer(name string) GenericPlayer {
 //	ecs := getEmptyCardSet()
 //	hc := HoleCards{cardset: &ecs}
 //	initialStack := 1000 // dollars
