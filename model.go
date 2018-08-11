@@ -382,13 +382,16 @@ func (p *Pot) getSegments() map[int][]*GenericPlayer {
 type Player interface {
 	fold()
 	allIn()
-	//check(t *Table)
+	check(t *Table)
+	preset()
+	setNextPlayer(p *Player)
+	setPreviousPlayer(p *Player)
 }
 
 type GenericPlayer struct {
 	name           string
-	nextPlayer     *GenericPlayer
-	previousPlayer *GenericPlayer
+	nextPlayer     *Player
+	previousPlayer *Player
 
 	// The below get preset after each game.
 	holeCards HoleCards
@@ -400,6 +403,7 @@ type GenericPlayer struct {
 
 // GenericPlayer constructor
 // http://www.golangpatterns.info/object-oriented/constructors
+// Maybe this could be replaced with new() and some helper lines.
 func NewGenericPlayer(name string) GenericPlayer {
 	ecs := getEmptyCardSet()
 	hc := HoleCards{cardset: &ecs}
@@ -433,6 +437,22 @@ func (p *GenericPlayer) preset() {
 	p.bet = 0
 	p.hasFolded = false
 	p.isAllIn = false
+}
+
+func (gp *GenericPlayer) setNextPlayer(p *Player) {
+	gp.nextPlayer = p
+}
+
+func (gp *GenericPlayer) getNextPlayer() *Player {
+	return gp.nextPlayer
+}
+
+func (gp *GenericPlayer) setPreviousPlayer(p *Player) {
+	gp.previousPlayer = p
+}
+
+func (gp *GenericPlayer) getPreviousPlayer() *Player {
+	return gp.previousPlayer
 }
 
 func (p *GenericPlayer) payBlind(blindAmount int) {
@@ -567,7 +587,7 @@ func NewCallingStationPlayer(name string) CallingStationPlayer {
 This breaks my brain.
  */
 type Table struct {
-	players          []*GenericPlayer
+	players          []*Player
 	//players          []*Player
 	gameCtr          int
 
@@ -618,9 +638,10 @@ func (t *Table) preset() {
 	t.pot = NewPot()
 	t.community = NewCommunity()
 
-	for _, p := range t.players{
-		p.preset()
-	}
+	//TODO interface this
+	//for _, p := range t.players{
+	//	p.preset()
+	//}
 
 }
 
@@ -633,9 +654,17 @@ func (t *Table) addPlayer(player Player) {
 		return
 	}
 
-	lastPlayer := t.players[len(t.players)-1]
+	//TODO interface this
+	lastPlayerPtr := t.players[len(t.players)-1]
 
-	lastPlayer.nextPlayer = &player
+	lastPlayer := *lastPlayerPtr
+	lastPlayer.setNextPlayer(&player)
+
+	// getting crazy - this is where I left off.
+	x := &player
+	x.setNextPlayer(&player)
+
+	//lastPlayer.nextPlayer = &player
 	player.previousPlayer = lastPlayer
 	player.nextPlayer = t.players[0]
 	t.players[0].previousPlayer = &player
@@ -651,6 +680,7 @@ func (t Table) printPlayerList() {
 	//fmt.Println("Here's the table: ", t)
 
 	fmt.Println("Players: ")
+	//TODO interface this
 	for _, p := range t.players {
 		fmt.Println(p.name, p.nextPlayer.name, p.nextPlayer.nextPlayer.name)
 	}
@@ -659,24 +689,21 @@ func (t Table) printPlayerList() {
 func (t Table) printLinkList(reverse bool, p *GenericPlayer) {
 	// the zero value of a bool is false
 
-	if p == nil {
-		p = t.players[0]
-	}
-
-	if reverse == false {
-		if p.nextPlayer == t.players[0] {
-			fmt.Println(p.name)
-			return
-		}
-	} else {
-		if p.previousPlayer == t.players[0] {
-			fmt.Println(p.name)
-			return
-		}
-	}
-	//if p.nextPlayer == t.players[0] {
-	//	fmt.Println(p.name)
-	//	return
+	//TODO interface this
+	//if p == nil {
+	//	p = t.players[0]
+	//}
+	//
+	//if reverse == false {
+	//	if p.nextPlayer == t.players[0] {
+	//		fmt.Println(p.name)
+	//		return
+	//	}
+	//} else {
+	//	if p.previousPlayer == t.players[0] {
+	//		fmt.Println(p.name)
+	//		return
+	//	}
 	//}
 
 	fmt.Printf("%s -> ", p.name)
@@ -690,8 +717,9 @@ func (t Table) printLinkList(reverse bool, p *GenericPlayer) {
 }
 
 func (t *Table) assignInitialButtonAndBlinds() {
-	n := rand.Int() % len(t.players)
-	t.button = *t.players[n]
+	//TODO interface this
+	//n := rand.Int() % len(t.players)
+	//t.button = *t.players[n]
 	fmt.Println("Assigning the button to:", t.button.name)
 
 	t.smallBlindPlayer = t.button.nextPlayer
@@ -718,20 +746,22 @@ func (t *Table) postBlinds() (table Table) {
 }
 
 func (t *Table) dealHoleCards() {
-	for _, player := range t.players {
-		player.holeCards.add(*t.deck.getCard())  // You need two hole cards.
-		player.holeCards.add(*t.deck.getCard())
-	}
+	//TODO interface this
+	//for _, player := range t.players {
+	//	player.holeCards.add(*t.deck.getCard())  // You need two hole cards.
+	//	player.holeCards.add(*t.deck.getCard())
+	//}
 }
 
 func (t *Table) getMaxBet() int {
 	maxBet := 0
 
-	for _, player := range t.players {
-		if player.bet > maxBet {
-			maxBet = player.bet
-		}
-	}
+	//TODO interface this
+	//for _, player := range t.players {
+	//	if player.bet > maxBet {
+	//		maxBet = player.bet
+	//	}
+	//}
 
 	return maxBet
 }
@@ -758,18 +788,19 @@ Return false unless all non folded players either have the same bet or
 are all-in.
  */
 func (t *Table) checkBetParity() bool {
-	maxBet := t.getMaxBet()
-	for _, p := range t.players {
-		if p.hasFolded || p.isAllIn {
-			continue
-		}
-
-		if p.bet != maxBet {
-			fmt.Println(p.name, "needs to take action.  Current bet is $", p.bet, "which is less than the max " +
-				"bet of $", maxBet)
-			return false
-		}
-	}
+	//TODO interface this
+	//maxBet := t.getMaxBet()
+	//for _, p := range t.players {
+	//	if p.hasFolded || p.isAllIn {
+	//		continue
+	//	}
+	//
+	//	if p.bet != maxBet {
+	//		fmt.Println(p.name, "needs to take action.  Current bet is $", p.bet, "which is less than the max " +
+	//			"bet of $", maxBet)
+	//		return false
+	//	}
+	//}
 
 	return true
 }
@@ -844,11 +875,12 @@ func (t *Table) checkForOnePlayer() bool {
 
 func (t *Table) moveBetsToPot() {
 	fmt.Println("Moving bets to pot.")
-	for _, p := range t.players {
-		fmt.Println(p.name, "had bet $", p.bet)
-		t.pot.addEquity(p.bet, p)
-		p.bet = 0
-	}
+	//TODO interface this
+	//for _, p := range t.players {
+	//	fmt.Println(p.name, "had bet $", p.bet)
+	//	t.pot.addEquity(p.bet, p)
+	//	p.bet = 0
+	//}
 }
 
 func (t *Table) dealFlop() {
@@ -891,13 +923,18 @@ func runTournament() {
 	table.initialize()
 
 	zubin := NewGenericPlayer("Zubin")
-	table.addPlayer(zubin)
+	table.addPlayer(&zubin)
 
-	table.addPlayer(NewGenericPlayer("Adam"))
-	table.addPlayer(NewGenericPlayer("Bert"))
-	table.addPlayer(NewCallingStationPlayer("Cail"))
-	table.addPlayer(NewGenericPlayer("Dale"))
-	table.addPlayer(NewGenericPlayer("Eyor"))
+	temp := NewGenericPlayer("Adam"); table.addPlayer(&temp)
+	temp = NewGenericPlayer("Bert"); table.addPlayer(&temp)
+	//temp = ("Cali"); table.addPlayer(&temp)
+	temp = NewGenericPlayer("Dale"); table.addPlayer(&temp)
+	temp = NewGenericPlayer("Eyor"); table.addPlayer(&temp)
+	//table.addPlayer(&NewGenericPlayer("Adam"))
+	//table.addPlayer(NewGenericPlayer("Bert"))
+	//table.addPlayer(NewCallingStationPlayer("Cail"))
+	//table.addPlayer(NewGenericPlayer("Dale"))
+	//table.addPlayer(NewGenericPlayer("Eyor"))
 	table.printPlayerList()
 	table.printLinkList(false, nil)
 	table.printLinkList(true, nil)
