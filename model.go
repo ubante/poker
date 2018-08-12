@@ -5,14 +5,14 @@ import (
 	"math/rand"
 	"strconv"
 
-	"time"
 	"gopkg.in/inconshreveable/log15.v2"
+	"time"
 )
 
 type Card struct {
 	suit         string
 	numericaRank int
-	rank		 string
+	rank         string
 }
 
 func NewCard(s string, nr int) Card {
@@ -21,16 +21,22 @@ func NewCard(s string, nr int) Card {
 	c.numericaRank = nr
 
 	if nr == 14 {
-		c.rank = "A"  // Aces are aces.
+		c.rank = "A" // Aces are aces.
 	}
 
 	switch nr {
-	case 14: c.rank = "A"  // Aces are aces.
-	case 13: c.rank = "K"
-	case 12: c.rank = "Q"
-	case 11: c.rank = "J"
-	case 10: c.rank = "T"
-	default: c.rank = strconv.Itoa(nr)
+	case 14:
+		c.rank = "A" // Aces are aces.
+	case 13:
+		c.rank = "K"
+	case 12:
+		c.rank = "Q"
+	case 11:
+		c.rank = "J"
+	case 10:
+		c.rank = "T"
+	default:
+		c.rank = strconv.Itoa(nr)
 	}
 
 	return c
@@ -92,7 +98,7 @@ func (cs *CardSet) add(c Card) {
 
 /*
 This will accept a cardset and combine it with this.
- */
+*/
 func (cs *CardSet) combine(cs2 CardSet) {
 	for _, card := range cs2.cards {
 		cs.add(*card)
@@ -102,7 +108,7 @@ func (cs *CardSet) combine(cs2 CardSet) {
 /*
 I couldn't find a pop function - weird.
 https://groups.google.com/forum/#!topic/Golang-nuts/obZI4uyZTe0
- */
+*/
 func (cs *CardSet) pop() *Card {
 	card := cs.cards[0]
 	copy(cs.cards, cs.cards[1:])
@@ -154,11 +160,11 @@ would be the numeric value of the pair.
 This just goes on and on.  For a flush and high card, it is
 possible to have a rank for each of the five cards.  For the
 other types of hands, these will remain at zero.
- */
+*/
 type Evaluation struct {
-	cardSet *CardSet
+	cardSet   *CardSet
 	humanEval string
-	allRanks []string
+	allRanks  []string
 }
 
 func NewEvaluation() *Evaluation {
@@ -171,8 +177,6 @@ func NewEvaluation() *Evaluation {
 
 func (e Evaluation) String() string {
 	toString := fmt.Sprint("%s: %s with ranks: [TBD]", e.cardSet, e.humanEval)
-
-
 
 	return toString
 }
@@ -200,7 +204,7 @@ func (hc HoleCards) String() string {
 }
 
 type Deck struct {
-	cardset *CardSet  // Deck is not a CardSet.
+	cardset *CardSet // Deck is not a CardSet.
 }
 
 func NewDeck() *Deck {
@@ -225,7 +229,7 @@ func NewDeck() *Deck {
 func (d *Deck) getStatus() string {
 	status := fmt.Sprintf("Deck has %d cards:\n", len(d.cardset.cards))
 	for i, card := range d.cardset.cards {
-		if i != 0 && i % 13 == 0 {
+		if i != 0 && i%13 == 0 {
 			status += "\n"
 		}
 		status += card.getStatus()
@@ -305,9 +309,9 @@ and PlayerC.
 
 Note that bets do not enter a pot until all betting is complete for
 the round.
- */
+*/
 type Pot struct {
-	value int  // This could be gotten from summing equity.
+	value  int // This could be gotten from summing equity.
 	equity map[*GenericPlayer]int
 }
 
@@ -389,6 +393,9 @@ type Player interface {
 	setPreviousPlayer(p *Player)
 	getPreviousPlayer() *Player
 	getName() string
+	checkHasFolded() bool
+	checkIsAllIn() bool
+	chooseAction(t *Table)
 }
 
 type GenericPlayer struct {
@@ -432,7 +439,7 @@ Preset before each game.
 
 Maybe use "prepare()" instead of "preset()" because the latter implies
 something you do afterwards.
- */
+*/
 func (gp *GenericPlayer) preset() {
 	// Maybe NewGenericPlayer can call this?
 	ecs := getEmptyCardSet()
@@ -554,7 +561,7 @@ func (gp *GenericPlayer) chooseAction(t *Table) {
 
 	// This is handled by Table() but be redundant for clearness.
 	if gp.hasFolded {
-		fmt.Println("I,", gp.name, "have already folded so no action.")
+		fmt.Println("I,", gp.name, "have already checkHasFolded so no action.")
 		return
 	}
 	if gp.isAllIn {
@@ -565,12 +572,24 @@ func (gp *GenericPlayer) chooseAction(t *Table) {
 	fmt.Println(gp.getStatus())
 
 	switch t.bettingRound {
-	case "PREFLOP": gp.chooseActionPreflop(t)
-	case "FLOP": gp.chooseActionFlop(t)
-	case "TURN": gp.chooseActionTurn(t)
-	case "RIVER": gp.chooseActionRiver(t)
+	case "PREFLOP":
+		gp.chooseActionPreflop(t)
+	case "FLOP":
+		gp.chooseActionFlop(t)
+	case "TURN":
+		gp.chooseActionTurn(t)
+	case "RIVER":
+		gp.chooseActionRiver(t)
 	}
 	return
+}
+
+func (gp *GenericPlayer) checkHasFolded() bool {
+	return gp.hasFolded
+}
+
+func (gp *GenericPlayer) checkIsAllIn() bool {
+	return gp.isAllIn
 }
 
 type CallingStationPlayer struct {
@@ -591,28 +610,27 @@ func NewCallingStationPlayer(name string) CallingStationPlayer {
 	return *newPlayer
 }
 
-
 /**
 This breaks my brain.
- */
+*/
 type Table struct {
-	players          []*Player
+	players []*Player
 	//players          []*Player
-	gameCtr          int
+	gameCtr int
 
 	// The below get preset before each game.
-	community        Community
+	community Community
 	//button           GenericPlayer
-	button           Player
-	smallBlindValue  int
+	button          Player
+	smallBlindValue int
 	//smallBlindPlayer *GenericPlayer
 	smallBlindPlayer *Player
 	bigBlindValue    int
 	//bigBlindPlayer   *GenericPlayer
-	bigBlindPlayer   *Player
-	bettingRound     string
-	deck             *Deck
-	pot              Pot
+	bigBlindPlayer *Player
+	bettingRound   string
+	deck           *Deck
+	pot            Pot
 }
 
 func (t *Table) getStatus() string {
@@ -631,7 +649,7 @@ func (t *Table) getStatus() string {
 
 /*
 This happens at the start of tournaments.
- */
+*/
 func (t *Table) initialize() {
 	t.gameCtr = 0
 
@@ -641,7 +659,7 @@ func (t *Table) initialize() {
 
 /*
 This happens at the start of games.
- */
+*/
 func (t *Table) preset() {
 	t.gameCtr++
 
@@ -685,7 +703,7 @@ func (t Table) printPlayerList() {
 	fmt.Println("Players: ")
 	//TODO interface this
 	for _, p := range t.players {
-		player := *p  // Needed because t.players is a slice of *Player.
+		player := *p // Needed because t.players is a slice of *Player.
 		np := player.getNextPlayer()
 		nextPlayer := *np
 		nnp := nextPlayer.getNextPlayer()
@@ -780,18 +798,20 @@ func (t *Table) getMaxBet() int {
 	return maxBet
 }
 
-func (t *Table) getPlayerAction(player *Player) {
-	if player.hasFolded {
-		fmt.Println(player.name, "has folded so no action.")
+func (t *Table) getPlayerAction(playerPtr *Player) {
+	//if player.checkHasFolded() {
+	player := *playerPtr
+	if player.checkHasFolded() {
+		fmt.Println(player.getName(), "has folded so no action.")
 		return
 	}
 
-	if player.isAllIn {
-		fmt.Println(player.name, "is all-in so no action.")
+	if player.checkIsAllIn() {
+		fmt.Println(player.getName(), "is all-in so no action.")
 		return
 	}
 
-	fmt.Println(player.name, "has action - finding it.")
+	fmt.Println(player.getName(), "has action - finding it.")
 	player.chooseAction(t)
 
 	return
@@ -800,7 +820,7 @@ func (t *Table) getPlayerAction(player *Player) {
 /*
 Return false unless all non folded players either have the same bet or
 are all-in.
- */
+*/
 func (t *Table) checkBetParity() bool {
 	//TODO interface this
 	//maxBet := t.getMaxBet()
@@ -825,22 +845,21 @@ func (t *Table) genericBet(firstBetter *Player) {
 	fmt.Println("The first better is", firstBetterDerefd.getName())
 	log15.Info("The first better is", firstBetterDerefd.getName())
 
-	better := firstBetter
-	t.getPlayerAction(better)
-	//better = better.nextPlayer
+	better := firstBetterDerefd
+	t.getPlayerAction(&better)
 	better = better.getNextPlayer()
 
 	// First go around the table.
 	for better != firstBetter {
-		fmt.Println(better.name, "is the better.")
+		fmt.Println(better.getName(), "is the better.")
 
 		if t.checkForOnePlayer() {
 			fmt.Println("We are down to one player.")
 			return
 		}
 
-		t.getPlayerAction(better)
-		better = better.nextPlayer
+		t.getPlayerAction(&better)
+		better = better.getNextPlayer()
 	}
 
 	fmt.Println("After going around the table once, we have:")
@@ -853,22 +872,23 @@ func (t *Table) genericBet(firstBetter *Player) {
 		}
 
 		// These players have no action.
-		if better.hasFolded || better.isAllIn {
+		if better.checkHasFolded() || better.checkIsAllIn() {
 			continue
 		}
 
 		if t.checkBetParity() {
-			fmt.Println("Everyone had a chance to bet and everyone is all-in, has folded or has called.")
+			fmt.Println("Everyone had a chance to bet and everyone is all-in, has checkHasFolded or has called.")
 			break
 		}
 
-		t.getPlayerAction(better)
-		better = better.nextPlayer
+		t.getPlayerAction(&better)
+		better = better.getNextPlayer()
 	}
 }
 
 func (t *Table) preFlopBet() {
-	firstBetter := t.bigBlindPlayer.nextPlayer
+	bigBlindPlayer := *t.bigBlindPlayer
+	firstBetter := bigBlindPlayer.getNextPlayer()
 	t.genericBet(firstBetter)
 }
 
@@ -938,15 +958,26 @@ func runTournament() {
 	var table Table
 	table.initialize()
 
-	temp := NewGenericPlayer("Adam"); table.addPlayer(&temp)
-	temp = NewGenericPlayer("Bert"); table.addPlayer(&temp)
+	//var temp Player
+	temp := NewGenericPlayer("Adam")
+	table.addPlayer(&temp)
+	temp = NewGenericPlayer("Bert")
+	table.addPlayer(&temp)
+	tempcs := NewCallingStationPlayer("Cali")
+	table.addPlayer(&tempcs)
 	//temp = ("Cali"); table.addPlayer(&temp)
-	temp = NewGenericPlayer("Dale"); table.addPlayer(&temp)
-	temp = NewGenericPlayer("Eyor"); table.addPlayer(&temp)
-	temp = NewGenericPlayer("Fred"); table.addPlayer(&temp)
-	temp = NewGenericPlayer("Greg"); table.addPlayer(&temp)
-	temp = NewGenericPlayer("Hill"); table.addPlayer(&temp)
-	temp = NewGenericPlayer("Igor"); table.addPlayer(&temp)
+	temp = NewGenericPlayer("Dale")
+	table.addPlayer(&temp)
+	temp = NewGenericPlayer("Eyor")
+	table.addPlayer(&temp)
+	temp = NewGenericPlayer("Fred")
+	table.addPlayer(&temp)
+	temp = NewGenericPlayer("Greg")
+	table.addPlayer(&temp)
+	temp = NewGenericPlayer("Hill")
+	table.addPlayer(&temp)
+	temp = NewGenericPlayer("Igor")
+	table.addPlayer(&temp)
 	table.printPlayerList()
 	table.printLinkList(false, nil)
 	table.printLinkList(true, nil)
@@ -988,7 +1019,6 @@ func runTournament() {
 		table.payWinners()
 	}
 
-
 }
 
 /*
@@ -996,7 +1026,7 @@ We will run multiple tournaments to find the best player type.
 Each tournament has multiple poker _games_.
 Each game has multiple betting _rounds_.
 Each winner of each game has the best _hand_ - multiple winners are possible.
- */
+*/
 
 func main() {
 	//card := NewCard("H", 12)
@@ -1007,8 +1037,6 @@ func main() {
 	//fmt.Println(cardSet.getStatus())
 	//fmt.Println(cardSet)
 
-
-
 	//for numericRank := range [13]int{} {
 	//	newCard := NewCard("D", numericRank+2)
 	//	//fmt.Println("New card:", newCard)
@@ -1018,14 +1046,12 @@ func main() {
 	//cardSet.shuffle()
 	//fmt.Println(cardSet.getStatus())
 	/*
-	H12 S4 D2 D3 D4 D5 D6 D7 D8 D9 D10 D11 D12 D13 D14
-	D11 D10 D14 D3 D2 D7 D12 S4 H12 D6 D4 D5 D8 D13 D9
+		H12 S4 D2 D3 D4 D5 D6 D7 D8 D9 D10 D11 D12 D13 D14
+		D11 D10 D14 D3 D2 D7 D12 S4 H12 D6 D4 D5 D8 D13 D9
 	*/
 
 	for i := 1; i <= 1; i++ {
 		runTournament()
 	}
-
-
 
 }
