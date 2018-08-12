@@ -385,7 +385,10 @@ type Player interface {
 	check(t *Table)
 	preset()
 	setNextPlayer(p *Player)
+	getNextPlayer() *Player
 	setPreviousPlayer(p *Player)
+	getPreviousPlayer() *Player
+	getName() string
 }
 
 type GenericPlayer struct {
@@ -413,15 +416,15 @@ func NewGenericPlayer(name string) GenericPlayer {
 	return newPlayer
 }
 
-func (p *GenericPlayer) getStatus() string {
+func (gp *GenericPlayer) getStatus() string {
 	status := ""
-	status = fmt.Sprintf("%s: [%s] stack=%d bet=%d", p.name, p.holeCards.toString(), p.stack, p.bet)
+	status = fmt.Sprintf("%s: [%s] stack=%d bet=%d", gp.name, gp.holeCards.toString(), gp.stack, gp.bet)
 
 	return status
 }
 
-func (p GenericPlayer) String() string {
-	return fmt.Sprintf("%s: [%s] $%d/$%d", p.name, p.holeCards.toString(), p.bet, p.stack)
+func (gp GenericPlayer) String() string {
+	return fmt.Sprintf("%s: [%s] $%d/$%d", gp.name, gp.holeCards.toString(), gp.bet, gp.stack)
 }
 
 /*
@@ -430,13 +433,13 @@ Preset before each game.
 Maybe use "prepare()" instead of "preset()" because the latter implies
 something you do afterwards.
  */
-func (p *GenericPlayer) preset() {
+func (gp *GenericPlayer) preset() {
 	// Maybe NewGenericPlayer can call this?
 	ecs := getEmptyCardSet()
-	p.holeCards = HoleCards{cardset: &ecs}
-	p.bet = 0
-	p.hasFolded = false
-	p.isAllIn = false
+	gp.holeCards = HoleCards{cardset: &ecs}
+	gp.bet = 0
+	gp.hasFolded = false
+	gp.isAllIn = false
 }
 
 func (gp *GenericPlayer) setNextPlayer(p *Player) {
@@ -455,111 +458,117 @@ func (gp *GenericPlayer) getPreviousPlayer() *Player {
 	return gp.previousPlayer
 }
 
-func (p *GenericPlayer) payBlind(blindAmount int) {
-	if p.stack > blindAmount {
-		p.stack -= blindAmount
-		p.bet = blindAmount
+// This is brutal but I think I need getters/setters for all fields so
+// I can use the Player interface.
+func (gp *GenericPlayer) getName() string {
+	return gp.name
+}
+
+func (gp *GenericPlayer) payBlind(blindAmount int) {
+	if gp.stack > blindAmount {
+		gp.stack -= blindAmount
+		gp.bet = blindAmount
 	} else {
-		p.allIn()
+		gp.allIn()
 	}
 }
 
-func (p *GenericPlayer) check(t *Table) {
+func (gp *GenericPlayer) check(t *Table) {
 	// This may one day do something.
 
 	return
 }
 
-func (p *GenericPlayer) call(t *Table) {
+func (gp *GenericPlayer) call(t *Table) {
 	maxBet := t.getMaxBet()
-	increase := maxBet - p.bet
-	stackBefore := p.stack
-	betBefore := p.bet
+	increase := maxBet - gp.bet
+	stackBefore := gp.stack
+	betBefore := gp.bet
 
-	if increase >= p.stack {
-		p.allIn()
+	if increase >= gp.stack {
+		gp.allIn()
 	} else {
-		p.bet = maxBet
-		p.stack -= increase
+		gp.bet = maxBet
+		gp.stack -= increase
 	}
 
 	fmt.Println("calling - max bet:", maxBet, "increase:", increase, "bet before/after: ", betBefore, "/",
-		p.bet, ", stack before/after:", stackBefore, "/", p.stack)
+		gp.bet, ", stack before/after:", stackBefore, "/", gp.stack)
 }
 
-func (p *GenericPlayer) fold() {
-	p.hasFolded = true
-	p.holeCards.toss()
+func (gp *GenericPlayer) fold() {
+	gp.hasFolded = true
+	gp.holeCards.toss()
 }
 
-func (p *GenericPlayer) allIn() {
-	p.bet += p.stack
-	p.stack = 0
-	p.isAllIn = true
+func (gp *GenericPlayer) allIn() {
+	gp.bet += gp.stack
+	gp.stack = 0
+	gp.isAllIn = true
 }
 
-func (p *GenericPlayer) checkOrCall(t *Table) {
+func (gp *GenericPlayer) checkOrCall(t *Table) {
 	if t.getMaxBet() == 0 {
-		p.check(t)
+		gp.check(t)
 		return
 	}
 
-	p.call(t)
+	gp.call(t)
 
 	return
 }
 
-func (p *GenericPlayer) checkOrFold(t *Table) {
+func (gp *GenericPlayer) checkOrFold(t *Table) {
 	return
 }
 
-func (p *GenericPlayer) chooseActionPreflop(t *Table) {
+func (gp *GenericPlayer) chooseActionPreflop(t *Table) {
 	fmt.Println("Using the default preflop action of check-calling")
-	p.checkOrCall(t)
+	gp.checkOrCall(t)
 
 	return
 }
 
-func (p *GenericPlayer) chooseActionFlop(t *Table) {
+func (gp *GenericPlayer) chooseActionFlop(t *Table) {
 	fmt.Println("Using the default flop action of check-folding")
-	p.checkOrFold(t)
+	gp.checkOrFold(t)
 
 	return
 }
 
-func (p *GenericPlayer) chooseActionTurn(t *Table) {
+func (gp *GenericPlayer) chooseActionTurn(t *Table) {
 	fmt.Println("Using the default turn action of check-folding")
-	p.checkOrFold(t)
+	gp.checkOrFold(t)
 
 	return
 }
 
-func (p *GenericPlayer) chooseActionRiver(t *Table) {
+func (gp *GenericPlayer) chooseActionRiver(t *Table) {
 	fmt.Println("Using the default river action of check-folding")
-	p.checkOrFold(t)
+	gp.checkOrFold(t)
 
 	return
 }
 
-func (p *GenericPlayer) chooseAction(t *Table) {
+func (gp *GenericPlayer) chooseAction(t *Table) {
 
 	// This is handled by Table() but be redundant for clearness.
-	if p.hasFolded {
-		fmt.Println("I,", p.name, "have already folded so no action.")
+	if gp.hasFolded {
+		fmt.Println("I,", gp.name, "have already folded so no action.")
 		return
 	}
-	if p.isAllIn {
-		fmt.Println("I,", p.name, "am all in so no action.")
+	if gp.isAllIn {
+		fmt.Println("I,", gp.name, "am all in so no action.")
 		return
 	}
 
-	fmt.Println(p.getStatus())
+	fmt.Println(gp.getStatus())
 
 	switch t.bettingRound {
-	case "PREFLOP": p.chooseActionPreflop(t)
-	case "FLOP": p.chooseActionFlop(t)
-	case "TURN": p.chooseActionTurn(t)
-	case "RIVER": p.chooseActionRiver(t)
+	case "PREFLOP": gp.chooseActionPreflop(t)
+	case "FLOP": gp.chooseActionFlop(t)
+	case "TURN": gp.chooseActionTurn(t)
+	case "RIVER": gp.chooseActionRiver(t)
 	}
 	return
 }
@@ -593,11 +602,14 @@ type Table struct {
 
 	// The below get preset before each game.
 	community        Community
-	button           GenericPlayer
+	//button           GenericPlayer
+	button           Player
 	smallBlindValue  int
-	smallBlindPlayer *GenericPlayer
+	//smallBlindPlayer *GenericPlayer
+	smallBlindPlayer *Player
 	bigBlindValue    int
-	bigBlindPlayer   *GenericPlayer
+	//bigBlindPlayer   *GenericPlayer
+	bigBlindPlayer   *Player
 	bettingRound     string
 	deck             *Deck
 	pot              Pot
@@ -645,34 +657,25 @@ func (t *Table) preset() {
 
 }
 
-//   receiver   name      inputs         return type
-//func (t *Table) addPlayer(player PlayerInterface) {  # TODO this needs a lot of work.
-//func (t *Table) addPlayer(player GenericPlayer) {
 func (t *Table) addPlayer(player Player) {
 	if len(t.players) == 0 {
 		t.players = append(t.players, &player)
 		return
 	}
 
-	//TODO interface this
+	initialPlayer := *t.players[0]
 	lastPlayerPtr := t.players[len(t.players)-1]
-
 	lastPlayer := *lastPlayerPtr
+
 	lastPlayer.setNextPlayer(&player)
-
-	// getting crazy - this is where I left off.
-	x := &player
-	x.setNextPlayer(&player)
-
-	//lastPlayer.nextPlayer = &player
-	player.previousPlayer = lastPlayer
-	player.nextPlayer = t.players[0]
-	t.players[0].previousPlayer = &player
+	player.setPreviousPlayer(&lastPlayer)
+	player.setNextPlayer(t.players[0])
+	initialPlayer.setPreviousPlayer(&player)
 
 	t.players = append(t.players, &player)
 
 	fmt.Printf("CURRENT PLAYER: %s > %s > %s\n",
-		player.previousPlayer.name, player.name, player.nextPlayer.name)
+		lastPlayer.getName(), player.getName(), initialPlayer.getName())
 	return
 }
 
@@ -682,11 +685,19 @@ func (t Table) printPlayerList() {
 	fmt.Println("Players: ")
 	//TODO interface this
 	for _, p := range t.players {
-		fmt.Println(p.name, p.nextPlayer.name, p.nextPlayer.nextPlayer.name)
+		player := *p  // Needed because t.players is a slice of *Player.
+		np := player.getNextPlayer()
+		nextPlayer := *np
+		nnp := nextPlayer.getNextPlayer()
+		nextNextPlayer := *nnp
+		//fmt.Println(player.getName(), p.nextPlayer.name, p.nextPlayer.nextPlayer.name)
+		//fmt.Println(player.getName(), nextPlayer.getName(), p.nextPlayer.nextPlayer.name)
+		fmt.Println(player.getName(), nextPlayer.getName(), nextNextPlayer.getName())
+		//fmt.Println(p.name, p.nextPlayer.name, p.nextPlayer.nextPlayer.name)
 	}
 }
 
-func (t Table) printLinkList(reverse bool, p *GenericPlayer) {
+func (t Table) printLinkList(reverse bool, p Player) {
 	// the zero value of a bool is false
 
 	//TODO interface this
@@ -706,12 +717,12 @@ func (t Table) printLinkList(reverse bool, p *GenericPlayer) {
 	//	}
 	//}
 
-	fmt.Printf("%s -> ", p.name)
+	fmt.Printf("%s -> ", p.getName())
 
 	if reverse == false {
-		t.printLinkList(reverse, p.nextPlayer)
+		t.printLinkList(reverse, p.getNextPlayer())
 	} else {
-		t.printLinkList(reverse, p.previousPlayer)
+		t.printLinkList(reverse, p.getPreviousPlayer())
 	}
 	return
 }
@@ -720,12 +731,14 @@ func (t *Table) assignInitialButtonAndBlinds() {
 	//TODO interface this
 	//n := rand.Int() % len(t.players)
 	//t.button = *t.players[n]
-	fmt.Println("Assigning the button to:", t.button.name)
 
-	t.smallBlindPlayer = t.button.nextPlayer
-	fmt.Println("Assigning SB to:", t.smallBlindPlayer.name)
-	t.bigBlindPlayer = t.smallBlindPlayer.nextPlayer
-	fmt.Println("Assigning BB to:", t.bigBlindPlayer.name)
+	fmt.Println("Assigning the button to:", t.button.getName())
+	t.smallBlindPlayer = t.button.getNextPlayer()
+	smallBlindDerefd := *t.smallBlindPlayer
+	fmt.Println("Assigning SB to:", smallBlindDerefd.getName())
+	t.bigBlindPlayer = smallBlindDerefd.getNextPlayer()
+	bigBlindPlayerDerefd := *t.bigBlindPlayer
+	fmt.Println("Assigning BB to:", bigBlindPlayerDerefd.getName())
 }
 
 func (t *Table) defineBlinds(sb int) {
@@ -734,13 +747,14 @@ func (t *Table) defineBlinds(sb int) {
 }
 
 func (t *Table) postBlinds() (table Table) {
-	t.bigBlindPlayer.payBlind(t.bigBlindValue)
-	fmt.Println(t.bigBlindPlayer.name, "just paid the blind of $", t.bigBlindPlayer.bet, "and has $",
-		t.bigBlindPlayer.stack, "left.")
-
-	t.smallBlindPlayer.payBlind(t.smallBlindValue)
-	fmt.Println(t.smallBlindPlayer.name, "just paid the blind of $", t.smallBlindPlayer.bet, "and has $",
-		t.smallBlindPlayer.stack, "left.")
+	//TODO interface this
+	//t.bigBlindPlayer.payBlind(t.bigBlindValue)
+	//fmt.Println(t.bigBlindPlayer.name, "just paid the blind of $", t.bigBlindPlayer.bet, "and has $",
+	//	t.bigBlindPlayer.stack, "left.")
+	//
+	//t.smallBlindPlayer.payBlind(t.smallBlindValue)
+	//fmt.Println(t.smallBlindPlayer.name, "just paid the blind of $", t.smallBlindPlayer.bet, "and has $",
+	//	t.smallBlindPlayer.stack, "left.")
 
 	return
 }
@@ -766,7 +780,7 @@ func (t *Table) getMaxBet() int {
 	return maxBet
 }
 
-func (t *Table) getPlayerAction(player *GenericPlayer) {
+func (t *Table) getPlayerAction(player *Player) {
 	if player.hasFolded {
 		fmt.Println(player.name, "has folded so no action.")
 		return
@@ -805,14 +819,16 @@ func (t *Table) checkBetParity() bool {
 	return true
 }
 
-func (t *Table) genericBet(firstBetter *GenericPlayer) {
+func (t *Table) genericBet(firstBetter *Player) {
 	//firstBetter := t.bigBlindPlayer.nextPlayer
-	fmt.Println("The first better is", firstBetter.name)
-	log15.Info("The first better is", firstBetter.name)
+	firstBetterDerefd := *firstBetter
+	fmt.Println("The first better is", firstBetterDerefd.getName())
+	log15.Info("The first better is", firstBetterDerefd.getName())
 
 	better := firstBetter
 	t.getPlayerAction(better)
-	better = better.nextPlayer
+	//better = better.nextPlayer
+	better = better.getNextPlayer()
 
 	// First go around the table.
 	for better != firstBetter {
@@ -922,19 +938,15 @@ func runTournament() {
 	var table Table
 	table.initialize()
 
-	zubin := NewGenericPlayer("Zubin")
-	table.addPlayer(&zubin)
-
 	temp := NewGenericPlayer("Adam"); table.addPlayer(&temp)
 	temp = NewGenericPlayer("Bert"); table.addPlayer(&temp)
 	//temp = ("Cali"); table.addPlayer(&temp)
 	temp = NewGenericPlayer("Dale"); table.addPlayer(&temp)
 	temp = NewGenericPlayer("Eyor"); table.addPlayer(&temp)
-	//table.addPlayer(&NewGenericPlayer("Adam"))
-	//table.addPlayer(NewGenericPlayer("Bert"))
-	//table.addPlayer(NewCallingStationPlayer("Cail"))
-	//table.addPlayer(NewGenericPlayer("Dale"))
-	//table.addPlayer(NewGenericPlayer("Eyor"))
+	temp = NewGenericPlayer("Fred"); table.addPlayer(&temp)
+	temp = NewGenericPlayer("Greg"); table.addPlayer(&temp)
+	temp = NewGenericPlayer("Hill"); table.addPlayer(&temp)
+	temp = NewGenericPlayer("Igor"); table.addPlayer(&temp)
 	table.printPlayerList()
 	table.printLinkList(false, nil)
 	table.printLinkList(true, nil)
