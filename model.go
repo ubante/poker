@@ -7,6 +7,7 @@ import (
 
 	"gopkg.in/inconshreveable/log15.v2"
 	"time"
+	"os"
 )
 
 type Card struct {
@@ -392,6 +393,7 @@ type Player interface {
 	getNextPlayer() *Player
 	setPreviousPlayer(p *Player)
 	getPreviousPlayer() *Player
+	setName(n string)
 	getName() string
 	checkHasFolded() bool
 	checkIsAllIn() bool
@@ -465,8 +467,10 @@ func (gp *GenericPlayer) getPreviousPlayer() *Player {
 	return gp.previousPlayer
 }
 
-// This is brutal but I think I need getters/setters for all fields so
-// I can use the Player interface.
+func (gp *GenericPlayer) setName(n string) {
+	gp.name = n
+}
+
 func (gp *GenericPlayer) getName() string {
 	return gp.name
 }
@@ -675,23 +679,79 @@ func (t *Table) preset() {
 
 }
 
-func (t *Table) addPlayer(player Player) {
+func (t *Table) deleteThisFunction(player Player) {}
+
+func (t *Table) addPlayerPointerVersion(player *Player) {
 	if len(t.players) == 0 {
-		t.players = append(t.players, &player)
+		t.players = append(t.players, player)
 		return
 	}
+
+	playerDerefd := *player
 
 	initialPlayer := *t.players[0]
 	lastPlayerPtr := t.players[len(t.players)-1]
 	lastPlayer := *lastPlayerPtr
 
+	lastPlayer.setNextPlayer(player)
+	playerDerefd.setPreviousPlayer(&lastPlayer)
+	playerDerefd.setNextPlayer(t.players[0])
+	initialPlayer.setPreviousPlayer(player)
+
+	t.players = append(t.players, player)
+
+	fmt.Printf("CURRENT PLAYER: %s > %s > %s\n",
+		lastPlayer.getName(), playerDerefd.getName(), initialPlayer.getName())
+	return
+}
+
+func (t *Table) addPlayer(player Player) {
+	if len(t.players) == 0 {
+		fmt.Println("The table is empty so adding", player.getName())
+		t.players = append(t.players, &player)
+		fmt.Println("The table now has length:", len(t.players))
+		fmt.Println(t)  // &{[0xc042054320] 0 {<nil>} <nil> 0 <nil> 0 <nil>  <nil> {0 map[]}}
+
+		//fmt.Printf("1b -> ")
+		//t.printPlayerList()
+
+		return
+	}
+
+	initialPlayer := *t.players[0]
+	fmt.Println("initial player is:", initialPlayer.getName())
+	lastPlayerPtr := t.players[len(t.players)-1]
+	lastPlayer := *lastPlayerPtr
+	fmt.Println("last player is:", lastPlayer.getName())
+
+	//var peter Player
+	//zubin := NewGenericPlayer("zubin")
+	//converterSlice := []*Player(&zubin)
+	//converterSlice = append(converterSlice, &zubin)
+
+	//fmt.Println("table.players is of type:", reflect.TypeOf(t.players))      // []*main.Player
+	//fmt.Println("table.gameCtr is of type:", reflect.TypeOf(t.gameCtr))      // int
+	//fmt.Println("table.Pot is of type:    ", reflect.TypeOf(t.pot))          // main.Pot
+	//fmt.Println("lastPlayerPtr is of type:", reflect.TypeOf(lastPlayerPtr))  // *main.Player
+	//fmt.Println("lastPlayer is of type:   ", reflect.TypeOf(lastPlayer))     // *main.GenericPlayer
+	//fmt.Println("&lastPlayer is of type:  ", reflect.TypeOf(&lastPlayer))    // *main.Player
+	//fmt.Println("zubin is of type:        ", reflect.TypeOf(zubin))          // main.GenericPlayer
+	//fmt.Println("&zubin is of type:       ", reflect.TypeOf(&zubin))         // *main.GenericPlayer
+	//fmt.Println("peter is of type:        ", reflect.TypeOf(peter))          // <nil>
+	//fmt.Println("&peter is of type:       ", reflect.TypeOf(&peter))         // *main.Player
+
 	lastPlayer.setNextPlayer(&player)
-	player.setPreviousPlayer(&lastPlayer)
+	//player.setPreviousPlayer(&lastPlayer)
+	player.setPreviousPlayer(lastPlayerPtr)
 	player.setNextPlayer(t.players[0])
 	initialPlayer.setPreviousPlayer(&player)
 
 	t.players = append(t.players, &player)
 
+	// below error: Can't use *GenericPlayer as type *Player
+	//player.setPreviousPlayer(&peter)
+
+	//player.setName("fakeo")
 	fmt.Printf("CURRENT PLAYER: %s > %s > %s\n",
 		lastPlayer.getName(), player.getName(), initialPlayer.getName())
 	return
@@ -738,9 +798,12 @@ func (t Table) printLinkList(reverse bool, p Player) {
 	fmt.Printf("%s -> ", p.getName())
 
 	if reverse == false {
-		t.printLinkList(reverse, p.getNextPlayer())
+		t.printLinkList(reverse, *p.getNextPlayer())  // error (fixed)
+		// poker\model.go:741:43: cannot use p.getNextPlayer() (type *Player) as type
+		// Player in argument to t.printLinkList:
+		//	*Player is pointer to interface, not interface
 	} else {
-		t.printLinkList(reverse, p.getPreviousPlayer())
+		t.printLinkList(reverse, *p.getPreviousPlayer())
 	}
 	return
 }
@@ -847,10 +910,13 @@ func (t *Table) genericBet(firstBetter *Player) {
 
 	better := firstBetterDerefd
 	t.getPlayerAction(&better)
-	better = better.getNextPlayer()
+	better = *better.getNextPlayer()  // error (fixed)
+	// poker\model.go:853:9: cannot use better.getNextPlayer() (type *Player)
+	// as type Player in assignment:
+	//	*Player is pointer to interface, not interface
 
 	// First go around the table.
-	for better != firstBetter {
+	for &better != firstBetter {
 		fmt.Println(better.getName(), "is the better.")
 
 		if t.checkForOnePlayer() {
@@ -859,7 +925,7 @@ func (t *Table) genericBet(firstBetter *Player) {
 		}
 
 		t.getPlayerAction(&better)
-		better = better.getNextPlayer()
+		better = *better.getNextPlayer()
 	}
 
 	fmt.Println("After going around the table once, we have:")
@@ -882,7 +948,7 @@ func (t *Table) genericBet(firstBetter *Player) {
 		}
 
 		t.getPlayerAction(&better)
-		better = better.getNextPlayer()
+		better = *better.getNextPlayer()
 	}
 }
 
@@ -957,15 +1023,29 @@ func (t *Table) payWinners() {
 func runTournament() {
 	var table Table
 	table.initialize()
+	fmt.Printf("1 -> ")
+	table.printPlayerList()
 
 	//var temp Player
 	temp := NewGenericPlayer("Adam")
 	table.addPlayer(&temp)
+	//fmt.Printf("2 -> ")
+	//table.printPlayerList()
+
+	table.deleteThisFunction(&temp)
 	temp = NewGenericPlayer("Bert")
 	table.addPlayer(&temp)
-	tempcs := NewCallingStationPlayer("Cali")
-	table.addPlayer(&tempcs)
-	//temp = ("Cali"); table.addPlayer(&temp)
+	fmt.Printf("3 -> ")
+	table.printPlayerList()
+
+	//tempPrevious := *temp.getPreviousPlayer()
+	//fmt.Printf("outside PLAYER: %s > %s > %s\n",
+	//	tempPrevious.getName(), temp.getName(), temp.getName())
+
+	os.Exit(3	)
+
+	tempCSP := NewCallingStationPlayer("Cali")
+	table.addPlayer(&tempCSP)
 	temp = NewGenericPlayer("Dale")
 	table.addPlayer(&temp)
 	temp = NewGenericPlayer("Eyor")
