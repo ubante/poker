@@ -679,8 +679,6 @@ func (t *Table) preset() {
 
 }
 
-func (t *Table) deleteThisFunction(player Player) {}
-
 func (t *Table) addPlayerPointerVersion(player *Player) {
 	if len(t.players) == 0 {
 		t.players = append(t.players, player)
@@ -707,10 +705,11 @@ func (t *Table) addPlayerPointerVersion(player *Player) {
 
 func (t *Table) addPlayer(player Player) {
 	if len(t.players) == 0 {
-		fmt.Println("The table is empty so adding", player.getName())
+		//fmt.Println(t)
+		//fmt.Println("The table is empty so adding", player.getName())
 		t.players = append(t.players, &player)
-		fmt.Println("The table now has length:", len(t.players))
-		fmt.Println(t)  // &{[0xc042054320] 0 {<nil>} <nil> 0 <nil> 0 <nil>  <nil> {0 map[]}}
+		//fmt.Println("The table now has length:", len(t.players))
+		//fmt.Println(t)  // &{[0xc042054320] 0 {<nil>} <nil> 0 <nil> 0 <nil>  <nil> {0 map[]}}
 
 		//fmt.Printf("1b -> ")
 		//t.printPlayerList()
@@ -718,11 +717,12 @@ func (t *Table) addPlayer(player Player) {
 		return
 	}
 
+	//t.printPlayerList()
 	initialPlayer := *t.players[0]
-	fmt.Println("initial player is:", initialPlayer.getName())
+	//fmt.Println("initial player is:", initialPlayer.getName())
 	lastPlayerPtr := t.players[len(t.players)-1]
 	lastPlayer := *lastPlayerPtr
-	fmt.Println("last player is:", lastPlayer.getName())
+	//fmt.Println("last player is:", lastPlayer.getName())
 
 	//var peter Player
 	//zubin := NewGenericPlayer("zubin")
@@ -758,6 +758,11 @@ func (t *Table) addPlayer(player Player) {
 }
 
 func (t Table) printPlayerList() {
+	if len(t.players) == 1 {
+		lonePlayer := *t.players[0]
+		fmt.Println("There is only one player at the table:", lonePlayer.getName())
+		return
+	}
 	//fmt.Println("Here's the table: ", t)
 
 	fmt.Println("Players: ")
@@ -1023,42 +1028,32 @@ func (t *Table) payWinners() {
 func runTournament() {
 	var table Table
 	table.initialize()
-	fmt.Printf("1 -> ")
-	table.printPlayerList()
+	//table.printPlayerList()
+	//fmt.Println(table.getStatus())
 
-	//var temp Player
 	temp := NewGenericPlayer("Adam")
 	table.addPlayer(&temp)
-	//fmt.Printf("2 -> ")
 	//table.printPlayerList()
-
-	table.deleteThisFunction(&temp)
-	temp = NewGenericPlayer("Bert")
-	table.addPlayer(&temp)
-	fmt.Printf("3 -> ")
-	table.printPlayerList()
-
-	//tempPrevious := *temp.getPreviousPlayer()
-	//fmt.Printf("outside PLAYER: %s > %s > %s\n",
-	//	tempPrevious.getName(), temp.getName(), temp.getName())
-
-	os.Exit(3	)
-
+	temp2 := NewGenericPlayer("Bert")
+	table.addPlayer(&temp2)
+	//table.printPlayerList()
 	tempCSP := NewCallingStationPlayer("Cali")
 	table.addPlayer(&tempCSP)
-	temp = NewGenericPlayer("Dale")
-	table.addPlayer(&temp)
-	temp = NewGenericPlayer("Eyor")
-	table.addPlayer(&temp)
-	temp = NewGenericPlayer("Fred")
-	table.addPlayer(&temp)
-	temp = NewGenericPlayer("Greg")
-	table.addPlayer(&temp)
-	temp = NewGenericPlayer("Hill")
-	table.addPlayer(&temp)
-	temp = NewGenericPlayer("Igor")
-	table.addPlayer(&temp)
-	table.printPlayerList()
+	temp4 := NewGenericPlayer("Dale")
+	table.addPlayer(&temp4)
+	temp5 := NewGenericPlayer("Eyor")
+	table.addPlayer(&temp5)
+	temp6 := NewGenericPlayer("Fred")
+	table.addPlayer(&temp6)
+	temp7 := NewGenericPlayer("Greg")
+	table.addPlayer(&temp7)
+	temp8 := NewGenericPlayer("Hill")
+	table.addPlayer(&temp8)
+	temp9 := NewGenericPlayer("Igor")
+	table.addPlayer(&temp9)
+	os.Exit(3	)
+
+	//table.printPlayerList()
 	table.printLinkList(false, nil)
 	table.printLinkList(true, nil)
 	fmt.Print("\n\n")
