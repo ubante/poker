@@ -614,6 +614,14 @@ func NewCallingStationPlayer(name string) CallingStationPlayer {
 	return *newPlayer
 }
 
+func (csp *CallingStationPlayer) chooseAction(t *Table) {
+
+	fmt.Println("This is CSP overriding chooseAction")
+	csp.checkOrCall(t)
+}
+
+
+
 /**
 This breaks my brain.
 */
@@ -780,43 +788,39 @@ func (t Table) printPlayerList() {
 	}
 }
 
-func (t Table) printLinkList(reverse bool, p Player) {
+func (t Table) printLinkList(reverse bool, p *Player) {
 	// the zero value of a bool is false
 
-	//TODO interface this
-	//if p == nil {
-	//	p = t.players[0]
-	//}
-	//
-	//if reverse == false {
-	//	if p.nextPlayer == t.players[0] {
-	//		fmt.Println(p.name)
-	//		return
-	//	}
-	//} else {
-	//	if p.previousPlayer == t.players[0] {
-	//		fmt.Println(p.name)
-	//		return
-	//	}
-	//}
-
-	fmt.Printf("%s -> ", p.getName())
+	if p == nil {
+		p = t.players[0]
+	}
+	player := *p
 
 	if reverse == false {
-		t.printLinkList(reverse, *p.getNextPlayer())  // error (fixed)
-		// poker\model.go:741:43: cannot use p.getNextPlayer() (type *Player) as type
-		// Player in argument to t.printLinkList:
-		//	*Player is pointer to interface, not interface
+		if player.getNextPlayer() == t.players[0] {
+			fmt.Println(player.getName())
+			return
+		}
 	} else {
-		t.printLinkList(reverse, *p.getPreviousPlayer())
+		if player.getPreviousPlayer() == t.players[0] {
+			fmt.Println(player.getName())
+			return
+		}
+	}
+
+	fmt.Printf("%s -> ", player.getName())
+	time.Sleep(1000)
+	if reverse == false {
+		t.printLinkList(reverse, player.getNextPlayer())  // error (fixed)
+	} else {
+		t.printLinkList(reverse, player.getPreviousPlayer())
 	}
 	return
 }
 
 func (t *Table) assignInitialButtonAndBlinds() {
-	//TODO interface this
-	//n := rand.Int() % len(t.players)
-	//t.button = *t.players[n]
+	n := rand.Int() % len(t.players)
+	t.button = *t.players[n]
 
 	fmt.Println("Assigning the button to:", t.button.getName())
 	t.smallBlindPlayer = t.button.getNextPlayer()
@@ -908,20 +912,16 @@ func (t *Table) checkBetParity() bool {
 }
 
 func (t *Table) genericBet(firstBetter *Player) {
-	//firstBetter := t.bigBlindPlayer.nextPlayer
 	firstBetterDerefd := *firstBetter
 	fmt.Println("The first better is", firstBetterDerefd.getName())
 	log15.Info("The first better is", firstBetterDerefd.getName())
 
 	better := firstBetterDerefd
 	t.getPlayerAction(&better)
-	better = *better.getNextPlayer()  // error (fixed)
-	// poker\model.go:853:9: cannot use better.getNextPlayer() (type *Player)
-	// as type Player in assignment:
-	//	*Player is pointer to interface, not interface
+	better = *better.getNextPlayer()
 
 	// First go around the table.
-	for &better != firstBetter {
+	for better != firstBetterDerefd {
 		fmt.Println(better.getName(), "is the better.")
 
 		if t.checkForOnePlayer() {
@@ -931,6 +931,7 @@ func (t *Table) genericBet(firstBetter *Player) {
 
 		t.getPlayerAction(&better)
 		better = *better.getNextPlayer()
+
 	}
 
 	fmt.Println("After going around the table once, we have:")
@@ -941,7 +942,7 @@ func (t *Table) genericBet(firstBetter *Player) {
 		if t.checkForOnePlayer() {
 			return
 		}
-
+		time.Sleep(1000)
 		// These players have no action.
 		if better.checkHasFolded() || better.checkIsAllIn() {
 			continue
@@ -1028,15 +1029,11 @@ func (t *Table) payWinners() {
 func runTournament() {
 	var table Table
 	table.initialize()
-	//table.printPlayerList()
-	//fmt.Println(table.getStatus())
 
 	temp := NewGenericPlayer("Adam")
 	table.addPlayer(&temp)
-	//table.printPlayerList()
 	temp2 := NewGenericPlayer("Bert")
 	table.addPlayer(&temp2)
-	//table.printPlayerList()
 	tempCSP := NewCallingStationPlayer("Cali")
 	table.addPlayer(&tempCSP)
 	temp4 := NewGenericPlayer("Dale")
@@ -1051,15 +1048,12 @@ func runTournament() {
 	table.addPlayer(&temp8)
 	temp9 := NewGenericPlayer("Igor")
 	table.addPlayer(&temp9)
-	os.Exit(3	)
 
-	//table.printPlayerList()
 	table.printLinkList(false, nil)
 	table.printLinkList(true, nil)
 	fmt.Print("\n\n")
 
 	// Set an initial small blind value.
-	//table.assignInitialButtonAndBlinds()
 	table.defineBlinds(25)
 
 	for i := 1; i <= 2; i++ {
@@ -1068,12 +1062,19 @@ func runTournament() {
 		table.preset()
 		fmt.Printf("This is game #%d.\n", table.gameCtr)
 		table.bettingRound = "PREFLOP"
+
 		table.postBlinds()
 		fmt.Print(table.getStatus())
 		table.dealHoleCards()
+		//os.Exit(3	)
+		//TODO need to make CallingStationPlayer fleshed out
+
 		table.preFlopBet()
+		os.Exit(3	)
+
 		table.moveBetsToPot()
 		fmt.Println(table.getStatus())
+		os.Exit(3	)
 
 		fmt.Println("Dealing the flop.")
 		table.dealFlop()
