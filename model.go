@@ -384,6 +384,7 @@ func (p *Pot) getSegments() map[int][]*GenericPlayer {
 	return segments
 }
 
+// This is probably an anti-pattern.
 type Player interface {
 	fold()
 	allIn()
@@ -395,6 +396,9 @@ type Player interface {
 	getPreviousPlayer() *Player
 	setName(n string)
 	getName() string
+	getBet() int
+	getStack() int
+	payBlind(blindAmount int)
 	checkHasFolded() bool
 	checkIsAllIn() bool
 	chooseAction(t *Table)
@@ -473,6 +477,14 @@ func (gp *GenericPlayer) setName(n string) {
 
 func (gp *GenericPlayer) getName() string {
 	return gp.name
+}
+
+func (gp *GenericPlayer) getBet() int {
+	return gp.bet
+}
+
+func (gp *GenericPlayer) getStack() int {
+	return gp.stack
 }
 
 func (gp *GenericPlayer) payBlind(blindAmount int) {
@@ -615,11 +627,49 @@ func NewCallingStationPlayer(name string) CallingStationPlayer {
 }
 
 func (csp *CallingStationPlayer) chooseAction(t *Table) {
-
 	fmt.Println("This is CSP overriding chooseAction")
-	csp.checkOrCall(t)
+	currentTableBet := t.getMaxBet()
+
+	if currentTableBet > csp.bet {
+		fmt.Printf("My bet ($%d) is below the table's bet ($%d) so calling.\n", csp.bet, currentTableBet)
+		csp.call(t)
+	} else {
+		fmt.Printf("My bet ($%d) is >= the table bet ($%d) so just checking.\n", csp.bet, currentTableBet)
+		csp.check(t)
+	}
+
 }
 
+type FoldingPlayer struct {
+	GenericPlayer
+}
+
+// Should really try new()
+func NewFoldingPlayer(name string) FoldingPlayer {
+	ecs := getEmptyCardSet()
+	hc := HoleCards{cardset: &ecs}
+	initialStack := 1000 // dollars
+
+	newPlayer := new(FoldingPlayer)
+	newPlayer.name = name
+	newPlayer.holeCards = hc
+	newPlayer.stack = initialStack
+
+	return *newPlayer
+}
+
+func (fp *FoldingPlayer) chooseAction(t *Table) {
+	fmt.Println("This is FP overriding chooseAction")
+	currentTableBet := t.getMaxBet()
+
+	if currentTableBet > fp.bet {
+		fmt.Printf("My bet ($%d) is below the table's bet ($%d) so folding like a champ.\n", fp.bet, currentTableBet)
+		fp.fold()
+	} else {
+		fmt.Printf("My bet ($%d) is >= the table bet ($%d) so I'm still in it.\n", fp.bet, currentTableBet)
+		fp.check(t)
+	}
+}
 
 
 /**
@@ -627,18 +677,14 @@ This breaks my brain.
 */
 type Table struct {
 	players []*Player
-	//players          []*Player
 	gameCtr int
 
 	// The below get preset before each game.
 	community Community
-	//button           GenericPlayer
 	button          Player
 	smallBlindValue int
-	//smallBlindPlayer *GenericPlayer
 	smallBlindPlayer *Player
 	bigBlindValue    int
-	//bigBlindPlayer   *GenericPlayer
 	bigBlindPlayer *Player
 	bettingRound   string
 	deck           *Deck
@@ -647,10 +693,10 @@ type Table struct {
 
 func (t *Table) getStatus() string {
 	status := "------\n"
-	status += fmt.Sprintf("%d players\n", len(t.players))
+	status += fmt.Sprintf("%s -- %d players\n", t.bettingRound, len(t.players))
 
 	for _, player := range t.players {
-		status += fmt.Sprintf("%s\n", player)
+		status += fmt.Sprintf("%s\n", *player)
 	}
 
 	status += fmt.Sprintf("Pot: %d\n", t.pot.value)
@@ -837,14 +883,14 @@ func (t *Table) defineBlinds(sb int) {
 }
 
 func (t *Table) postBlinds() (table Table) {
-	//TODO interface this
-	//t.bigBlindPlayer.payBlind(t.bigBlindValue)
-	//fmt.Println(t.bigBlindPlayer.name, "just paid the blind of $", t.bigBlindPlayer.bet, "and has $",
-	//	t.bigBlindPlayer.stack, "left.")
-	//
-	//t.smallBlindPlayer.payBlind(t.smallBlindValue)
-	//fmt.Println(t.smallBlindPlayer.name, "just paid the blind of $", t.smallBlindPlayer.bet, "and has $",
-	//	t.smallBlindPlayer.stack, "left.")
+	bbp := *t.bigBlindPlayer
+	bbp.payBlind(t.bigBlindValue)
+	fmt.Println(bbp.getName(), "just paid the blind of $", t.bigBlindValue, "and has $",
+		bbp.getStack(), "left.")
+	sbp := *t.smallBlindPlayer
+	sbp.payBlind(t.smallBlindValue)
+	fmt.Println(sbp.getName(), "just paid the blind of $", t.smallBlindValue, "and has $",
+		sbp.getStack(), "left.")
 
 	return
 }
@@ -858,14 +904,19 @@ func (t *Table) dealHoleCards() {
 }
 
 func (t *Table) getMaxBet() int {
-	maxBet := 0
+	var maxBet int
+	if t.bettingRound == "PREFLOP" {
+		maxBet = t.bigBlindValue
+	} else {
+		maxBet = 0
+	}
 
-	//TODO interface this
-	//for _, player := range t.players {
-	//	if player.bet > maxBet {
-	//		maxBet = player.bet
-	//	}
-	//}
+	for _, p := range t.players {
+		player := *p
+		if maxBet < player.getBet() {
+			maxBet = player.getBet()
+		}
+	}
 
 	return maxBet
 }
@@ -1040,7 +1091,7 @@ func runTournament() {
 	table.addPlayer(&temp4)
 	temp5 := NewGenericPlayer("Eyor")
 	table.addPlayer(&temp5)
-	temp6 := NewGenericPlayer("Fred")
+	temp6 := NewFoldingPlayer("Fred")
 	table.addPlayer(&temp6)
 	temp7 := NewGenericPlayer("Greg")
 	table.addPlayer(&temp7)

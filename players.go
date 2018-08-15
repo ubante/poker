@@ -1,27 +1,26 @@
 package main
 
-import "fmt"
-
-type FoldingPlayer struct {
-	GenericPlayer
-}
-
-func NewFoldingPlayer(name string) FoldingPlayer {
-	ecs := getEmptyCardSet()
-	hc := HoleCards{cardset: &ecs}
-	initialStack := 1000 // dollars
-	newPlayer := FoldingPlayer{GenericPlayer{name, nil, nil, hc, initialStack, 0,
-		false, false}}
-	return newPlayer
-}
-
-func main() {
-	fmt.Println("Players playas")
-
-	fp := NewFoldingPlayer("Fernie")
-
-	fmt.Println(fp)
-}
+//
+//type FoldingPlayer struct {
+//	GenericPlayer
+//}
+//
+//func NewFoldingPlayer(name string) FoldingPlayer {
+//	ecs := getEmptyCardSet()
+//	hc := HoleCards{cardset: &ecs}
+//	initialStack := 1000 // dollars
+//	newPlayer := FoldingPlayer{GenericPlayer{name, nil, nil, hc, initialStack, 0,
+//		false, false}}
+//	return newPlayer
+//}
+//
+//func main() {
+//	fmt.Println("Players playas")
+//
+//	fp := NewFoldingPlayer("Fernie")
+//
+//	fmt.Println(fp)
+//}
 
 //
 //type GenericPlayer struct {
