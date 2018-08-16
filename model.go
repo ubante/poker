@@ -7,7 +7,6 @@ import (
 
 	"gopkg.in/inconshreveable/log15.v2"
 	"time"
-	"os"
 )
 
 type Card struct {
@@ -43,9 +42,12 @@ func NewCard(s string, nr int) Card {
 	return c
 }
 
-// Should I rename all these getStatus() methods to toString()?
-func (c *Card) getStatus() string {
+func (c *Card) toString() string {
 	return fmt.Sprintf("%s%s", c.suit, c.rank)
+}
+
+func (c Card) String() string {
+	return c.toString()
 }
 
 func (c Card) isSuited(c2 Card) bool {
@@ -83,11 +85,11 @@ func (cs CardSet) String() string {
 
 	for _, c := range cs.cards {
 		if toString == "" {
-			toString = c.getStatus()
+			toString = c.toString()
 			continue
 		}
 
-		toString += fmt.Sprintf(" %s", c.getStatus())
+		toString += fmt.Sprintf(" %s", c.toString())
 	}
 
 	return toString
@@ -187,21 +189,28 @@ type HoleCards struct {
 }
 
 func (hc *HoleCards) toString() string {
+	if hc.cardset == nil {
+		return ""
+	}
+
 	return hc.cardset.String()
+}
+
+func (hc HoleCards) String() string {
+	return hc.toString()
 }
 
 func (hc *HoleCards) add(c Card) {
 	hc.cardset.add(c)
 }
 
-// Maybe call this hc.reset() and it can be used in more than one place.
-func (hc *HoleCards) toss() {
+func (hc *HoleCards) empty() {
 	ecs := getEmptyCardSet()
 	hc.cardset = &ecs
 }
 
-func (hc HoleCards) String() string {
-	return hc.cardset.String()
+func (hc *HoleCards) toss() {
+	hc.empty()
 }
 
 type Deck struct {
@@ -217,12 +226,9 @@ func NewDeck() *Deck {
 		// https://stackoverflow.com/questions/21950244/is-there-a-way-to-iterate-over-a-range-of-integers-in-golang
 		for numericRank := range [13]int{} {
 			newCard := NewCard(suit, numericRank+2)
-			//fmt.Println("New card:", newCard)
 			d.cardset.add(newCard)
 		}
 	}
-
-	fmt.Println("Made a new deck.")
 
 	return &d
 }
@@ -233,7 +239,7 @@ func (d *Deck) getStatus() string {
 		if i != 0 && i%13 == 0 {
 			status += "\n"
 		}
-		status += card.getStatus()
+		status += card.toString()
 		status += " "
 	}
 
@@ -313,14 +319,14 @@ the round.
 */
 type Pot struct {
 	value  int // This could be gotten from summing equity.
-	equity map[*GenericPlayer]int
+	equity map[*Player]int
 }
 
 func NewPot() Pot {
 	var pot Pot
 
 	pot.value = 0
-	pot.equity = make(map[*GenericPlayer]int)
+	pot.equity = make(map[*Player]int)
 
 	return pot
 }
@@ -328,25 +334,32 @@ func NewPot() Pot {
 func (p Pot) String() string {
 	toString := fmt.Sprintf("POT is $%d\n", p.value)
 
-	for player, value := range p.equity {
-		toString += fmt.Sprintf("%s has equity: $%d\n", player.name, value)
+	for p, value := range p.equity {
+		player := *p
+		toString += fmt.Sprintf("%s has equity: $%d\n", player.getName(), value)
 	}
 
 	return toString
 }
 
-func (p *Pot) addEquity(playerBet int, player *GenericPlayer) {
+func (p *Pot) addEquity(playerBet int, player *Player) {
 	p.value += playerBet
 	p.equity[player] += playerBet
 }
 
-func (p *Pot) getSegments() map[int][]*GenericPlayer {
+//func (p *Pot) addEquity(playerBet int, player *GenericPlayer) {
+//	p.value += playerBet
+//	p.equity[player] += playerBet
+//}
+//
+func (p *Pot) getSegments() map[int][]*Player {
 	//fmt.Println("segments wooo hoo")
 
 	// First invert the map.
-	invertedMap := make(map[int][]*GenericPlayer)
-	for player, equity := range p.equity {
-		invertedMap[equity] = append(invertedMap[equity], player)
+	invertedMap := make(map[int][]*Player)
+	for p, equity := range p.equity {
+		player := *p
+		invertedMap[equity] = append(invertedMap[equity], &player)
 	}
 
 	// Then sort the values of equity.  Note that this also removes
@@ -357,28 +370,16 @@ func (p *Pot) getSegments() map[int][]*GenericPlayer {
 	}
 
 	// Loop through the equities and create the reverse map.
-	segments := make(map[int][]*GenericPlayer)
+	segments := make(map[int][]*Player)
 	for _, equity := range sortedEquity {
 		fmt.Printf("$%d: \n", equity)
-		for _, player := range invertedMap[equity] {
-			fmt.Printf("    %s\n", player.name)
-			segments[equity] = append(segments[equity], player)
+		for _, p := range invertedMap[equity] {
+			player := *p
+			fmt.Printf("    %s\n", player.getName())
+			segments[equity] = append(segments[equity], &player)
 		}
 		fmt.Println()
 	}
-
-	//
-	//// Get all the values of the equity map.
-	//values := make([]int, len(p.equity))
-	//for _, player := range p.equity {
-	//
-	//	// We only care about unique values.
-	//	// https://stackoverflow.com/questions/9251234/go-append-if-unique
-	//	values = append(values, player)
-	//}
-	//fmt.Println(values)
-
-	//previous := 0
 
 	//fmt.Println("Returning from getSegments().")
 	return segments
@@ -396,6 +397,7 @@ type Player interface {
 	getPreviousPlayer() *Player
 	setName(n string)
 	getName() string
+	setBet(newBet int)
 	getBet() int
 	getStack() int
 	payBlind(blindAmount int)
@@ -477,6 +479,10 @@ func (gp *GenericPlayer) setName(n string) {
 
 func (gp *GenericPlayer) getName() string {
 	return gp.name
+}
+
+func (gp *GenericPlayer) setBet(newBet int) {
+	gp.bet = newBet
 }
 
 func (gp *GenericPlayer) getBet() int {
@@ -691,6 +697,7 @@ type Table struct {
 	pot            Pot
 }
 
+// getStatus is more verbose than toString.
 func (t *Table) getStatus() string {
 	status := "------\n"
 	status += fmt.Sprintf("%s -- %d players\n", t.bettingRound, len(t.players))
@@ -726,11 +733,10 @@ func (t *Table) preset() {
 	t.pot = NewPot()
 	t.community = NewCommunity()
 
-	//TODO interface this
-	//for _, p := range t.players{
-	//	p.preset()
-	//}
-
+	for _, p := range t.players {
+		player := *p
+		player.preset()
+	}
 }
 
 func (t *Table) addPlayerPointerVersion(player *Player) {
@@ -1034,12 +1040,12 @@ func (t *Table) checkForOnePlayer() bool {
 
 func (t *Table) moveBetsToPot() {
 	fmt.Println("Moving bets to pot.")
-	//TODO interface this
-	//for _, p := range t.players {
-	//	fmt.Println(p.name, "had bet $", p.bet)
-	//	t.pot.addEquity(p.bet, p)
-	//	p.bet = 0
-	//}
+
+	for _, p := range t.players {
+		player := *p
+		t.pot.addEquity(player.getBet(), p)
+		player.setBet(0)
+	}
 }
 
 func (t *Table) dealFlop() {
@@ -1068,8 +1074,9 @@ func (t *Table) payWinners() {
 	// To properly test this loop, we need different player types first.
 	for segmentAmount, segmentPlayers := range t.pot.getSegments() {
 		fmt.Printf("$%d: ", segmentAmount)
-		for _, player := range segmentPlayers {
-			fmt.Printf("%s, ", player.name)
+		for _, p := range segmentPlayers {
+			player := *p
+			fmt.Printf("%s, ", player.getName())
 		}
 		fmt.Println()
 		//fmt.Println(segmentAmount, "->", segmentPlayers)
@@ -1109,23 +1116,17 @@ func runTournament() {
 
 	for i := 1; i <= 2; i++ {
 		fmt.Println("============================")
-		table.assignInitialButtonAndBlinds()
 		table.preset()
 		fmt.Printf("This is game #%d.\n", table.gameCtr)
+		table.assignInitialButtonAndBlinds()
 		table.bettingRound = "PREFLOP"
 
 		table.postBlinds()
 		fmt.Print(table.getStatus())
 		table.dealHoleCards()
-		//os.Exit(3	)
-		//TODO need to make CallingStationPlayer fleshed out
-
 		table.preFlopBet()
-		os.Exit(3	)
-
 		table.moveBetsToPot()
 		fmt.Println(table.getStatus())
-		os.Exit(3	)
 
 		fmt.Println("Dealing the flop.")
 		table.dealFlop()
@@ -1158,11 +1159,26 @@ Each winner of each game has the best _hand_ - multiple winners are possible.
 func main() {
 	//card := NewCard("H", 12)
 	//cardSet := NewCardSet(card)
-	//fmt.Println(cardSet.getStatus())
+	//fmt.Println(cardSet)
 	//card2 := NewCard("S", 4)
 	//cardSet.add(card2)
-	//fmt.Println(cardSet.getStatus())
 	//fmt.Println(cardSet)
+	//fmt.Println("Cardset:", cardSet)
+	//
+	//ecs := getEmptyCardSet()
+	//fmt.Println("ECS:", ecs)
+	//
+	////holeCards := new(HoleCards)
+	//holeCards := HoleCards{cardset: &ecs}
+	//fmt.Println("Holecards:", holeCards)
+	//holeCards.add(card)
+	//fmt.Println("Holecards:", holeCards)
+	//holeCards.add(card2)
+	//fmt.Println("Holecards:", holeCards)
+	//holeCards.add(card)
+	//fmt.Println("Holecards:", holeCards)
+	//
+	//os.Exit(3)
 
 	//for numericRank := range [13]int{} {
 	//	newCard := NewCard("D", numericRank+2)
@@ -1177,7 +1193,9 @@ func main() {
 		D11 D10 D14 D3 D2 D7 D12 S4 H12 D6 D4 D5 D8 D13 D9
 	*/
 
-	for i := 1; i <= 1; i++ {
+	for i := 1; i <= 2; i++ {
+		fmt.Println(">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>")
+		fmt.Printf("Starting tournament #%d\n", i)
 		runTournament()
 	}
 
