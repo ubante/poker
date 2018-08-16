@@ -7,6 +7,7 @@ import (
 
 	"gopkg.in/inconshreveable/log15.v2"
 	"time"
+	"os"
 )
 
 type Card struct {
@@ -80,7 +81,7 @@ func NewCardSet(cards ...Card) CardSet {
 	return cs
 }
 
-func (cs CardSet) String() string {
+func (cs CardSet) toString() string {
 	var toString string
 
 	for _, c := range cs.cards {
@@ -93,6 +94,10 @@ func (cs CardSet) String() string {
 	}
 
 	return toString
+}
+
+func (cs CardSet) String() string {
+	return cs.toString()
 }
 
 func (cs *CardSet) add(c Card) {
@@ -193,7 +198,8 @@ func (hc *HoleCards) toString() string {
 		return ""
 	}
 
-	return hc.cardset.String()
+	//return "starnge"
+	return hc.cardset.toString()
 }
 
 func (hc HoleCards) String() string {
@@ -400,6 +406,7 @@ type Player interface {
 	setBet(newBet int)
 	getBet() int
 	getStack() int
+	addHoleCard(c Card)
 	payBlind(blindAmount int)
 	checkHasFolded() bool
 	checkIsAllIn() bool
@@ -493,6 +500,10 @@ func (gp *GenericPlayer) getStack() int {
 	return gp.stack
 }
 
+func (gp *GenericPlayer) addHoleCard(c Card) {
+	gp.holeCards.add(c)
+}
+
 func (gp *GenericPlayer) payBlind(blindAmount int) {
 	if gp.stack > blindAmount {
 		gp.stack -= blindAmount
@@ -521,8 +532,8 @@ func (gp *GenericPlayer) call(t *Table) {
 		gp.stack -= increase
 	}
 
-	fmt.Println("calling - max bet:", maxBet, "increase:", increase, "bet before/after: ", betBefore, "/",
-		gp.bet, ", stack before/after:", stackBefore, "/", gp.stack)
+	fmt.Printf("calling - max bet:%d, increase:%d, bet before/after:%d/%d, stack before/after:%d/%d\n",
+		maxBet, increase, betBefore, gp.bet, stackBefore, gp.stack)
 }
 
 func (gp *GenericPlayer) fold() {
@@ -650,7 +661,6 @@ type FoldingPlayer struct {
 	GenericPlayer
 }
 
-// Should really try new()
 func NewFoldingPlayer(name string) FoldingPlayer {
 	ecs := getEmptyCardSet()
 	hc := HoleCards{cardset: &ecs}
@@ -677,6 +687,27 @@ func (fp *FoldingPlayer) chooseAction(t *Table) {
 	}
 }
 
+type AllInAlwaysPlayer struct {
+	GenericPlayer
+}
+
+func NewAllInAlwaysPlayer(name string) AllInAlwaysPlayer {
+	ecs := getEmptyCardSet()
+	hc := HoleCards{cardset: &ecs}
+	initialStack := 1000 // dollars
+
+	newPlayer := new(AllInAlwaysPlayer)
+	newPlayer.name = name
+	newPlayer.holeCards = hc
+	newPlayer.stack = initialStack
+
+	return *newPlayer
+}
+
+func (ap *AllInAlwaysPlayer) chooseAction(t *Table) {
+	fmt.Println("I am always all-in always.")
+	ap.allIn()
+}
 
 /**
 This breaks my brain.
@@ -826,17 +857,13 @@ func (t Table) printPlayerList() {
 	//fmt.Println("Here's the table: ", t)
 
 	fmt.Println("Players: ")
-	//TODO interface this
 	for _, p := range t.players {
 		player := *p // Needed because t.players is a slice of *Player.
 		np := player.getNextPlayer()
 		nextPlayer := *np
 		nnp := nextPlayer.getNextPlayer()
 		nextNextPlayer := *nnp
-		//fmt.Println(player.getName(), p.nextPlayer.name, p.nextPlayer.nextPlayer.name)
-		//fmt.Println(player.getName(), nextPlayer.getName(), p.nextPlayer.nextPlayer.name)
 		fmt.Println(player.getName(), nextPlayer.getName(), nextNextPlayer.getName())
-		//fmt.Println(p.name, p.nextPlayer.name, p.nextPlayer.nextPlayer.name)
 	}
 }
 
@@ -902,11 +929,12 @@ func (t *Table) postBlinds() (table Table) {
 }
 
 func (t *Table) dealHoleCards() {
-	//TODO interface this
-	//for _, player := range t.players {
-	//	player.holeCards.add(*t.deck.getCard())  // You need two hole cards.
-	//	player.holeCards.add(*t.deck.getCard())
-	//}
+
+	for _, p := range t.players {
+		player := *p
+		player.addHoleCard(*t.deck.getCard())
+		player.addHoleCard(*t.deck.getCard())
+	}
 }
 
 func (t *Table) getMaxBet() int {
@@ -951,19 +979,19 @@ Return false unless all non folded players either have the same bet or
 are all-in.
 */
 func (t *Table) checkBetParity() bool {
-	//TODO interface this
-	//maxBet := t.getMaxBet()
-	//for _, p := range t.players {
-	//	if p.hasFolded || p.isAllIn {
-	//		continue
-	//	}
-	//
-	//	if p.bet != maxBet {
-	//		fmt.Println(p.name, "needs to take action.  Current bet is $", p.bet, "which is less than the max " +
-	//			"bet of $", maxBet)
-	//		return false
-	//	}
-	//}
+	maxBet := t.getMaxBet()
+	for _, p := range t.players {
+		player := *p
+		if player.checkHasFolded() || player.checkIsAllIn() {
+			continue
+		}
+
+		if player.getBet() != maxBet {
+			fmt.Println(player.getName(), "needs to take action.  Current bet is $", player.getBet(),
+				"which is less than the max bet of $", maxBet)
+			return false
+		}
+	}
 
 	return true
 }
@@ -997,18 +1025,24 @@ func (t *Table) genericBet(firstBetter *Player) {
 	// There may be raises and re-raises so handle that.
 	for {
 		if t.checkForOnePlayer() {
-			return
+			fmt.Println("There is only one player left with action.")
+			break
 		}
 		time.Sleep(1000)
-		// These players have no action.
-		if better.checkHasFolded() || better.checkIsAllIn() {
-			continue
-		}
 
 		if t.checkBetParity() {
 			fmt.Println("Everyone had a chance to bet and everyone is all-in, has checkHasFolded or has called.")
 			break
 		}
+
+		// These players have no action.
+		if better.checkHasFolded() || better.checkIsAllIn() {
+			fmt.Println(better.getName(), "has no action.")
+			better = *better.getNextPlayer()
+			continue
+		}
+
+
 
 		t.getPlayerAction(&better)
 		better = *better.getNextPlayer()
@@ -1088,7 +1122,7 @@ func runTournament() {
 	var table Table
 	table.initialize()
 
-	temp := NewGenericPlayer("Adam")
+	temp := NewAllInAlwaysPlayer("Adam")
 	table.addPlayer(&temp)
 	temp2 := NewGenericPlayer("Bert")
 	table.addPlayer(&temp2)
@@ -1128,16 +1162,24 @@ func runTournament() {
 		table.moveBetsToPot()
 		fmt.Println(table.getStatus())
 
+		if i == 2 {
+			fmt.Println("Figure out how to pay winners then we'll continue.")
+			os.Exit(3)
+		}
+
+		table.bettingRound = "FLOP"
 		fmt.Println("Dealing the flop.")
 		table.dealFlop()
 		table.postPreFlopBet()
 		fmt.Println(table.getStatus())
 
+		table.bettingRound = "TURN"
 		fmt.Println("Dealing the turn.")
 		table.dealTurn()
 		table.postPreFlopBet()
 		fmt.Println(table.getStatus())
 
+		table.bettingRound = "RIVER"
 		fmt.Println("Dealing the river.")
 		table.dealRiver()
 		table.postPreFlopBet()
