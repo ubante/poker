@@ -81,6 +81,8 @@ func NewCardSet(cards ...Card) CardSet {
 	return cs
 }
 
+// I should rename toString to String and explicitly call
+// SomeType.String() when I want a string outside of Println()
 func (cs CardSet) toString() string {
 	var toString string
 
@@ -105,12 +107,19 @@ func (cs *CardSet) add(c Card) {
 }
 
 /*
-This will accept a cardset and combine it with this.
+This will accept a cardset and return the union of it with this.
 */
-func (cs *CardSet) combine(cs2 CardSet) {
-	for _, card := range cs2.cards {
-		cs.add(*card)
+func (cs *CardSet) combine(cs2 CardSet) CardSet {
+	var combined CardSet
+
+	for _, card := range cs.cards {
+		combined.add(*card)
 	}
+	for _, card := range cs2.cards {
+		combined.add(*card)
+	}
+
+	return combined
 }
 
 /*
@@ -133,13 +142,6 @@ func (cs *CardSet) shuffle() {
 
 func (cs CardSet) length() int {
 	return len(cs.cards)
-}
-
-// This should be a CardSet method.
-func getEmptyCardSet() CardSet {
-	empty := CardSet{}
-
-	return empty
 }
 
 /*
@@ -177,14 +179,14 @@ type Evaluation struct {
 
 func NewEvaluation() *Evaluation {
 	var eval Evaluation
-	ecs := getEmptyCardSet()
+	ecs := NewCardSet()
 	eval.cardSet = &ecs
 
 	return &eval
 }
 
 func (e Evaluation) String() string {
-	toString := fmt.Sprint("%s: %s with ranks: [TBD]", e.cardSet, e.humanEval)
+	toString := fmt.Sprintf("%s: %s with ranks: [TBD]", e.cardSet, e.humanEval)
 
 	return toString
 }
@@ -198,7 +200,6 @@ func (hc *HoleCards) toString() string {
 		return ""
 	}
 
-	//return "starnge"
 	return hc.cardset.toString()
 }
 
@@ -211,7 +212,7 @@ func (hc *HoleCards) add(c Card) {
 }
 
 func (hc *HoleCards) empty() {
-	ecs := getEmptyCardSet()
+	ecs := NewCardSet()
 	hc.cardset = &ecs
 }
 
@@ -225,7 +226,7 @@ type Deck struct {
 
 func NewDeck() *Deck {
 	var d Deck
-	ecs := getEmptyCardSet()
+	ecs := NewCardSet()
 	d.cardset = &ecs
 
 	for _, suit := range []string{"S", "H", "D", "C"} {
@@ -271,7 +272,7 @@ type Community struct {
 }
 
 func NewCommunity() Community {
-	ecs := getEmptyCardSet()
+	ecs := NewCardSet()
 
 	var c Community
 	c.cards = &ecs
@@ -353,13 +354,7 @@ func (p *Pot) addEquity(playerBet int, player *Player) {
 	p.equity[player] += playerBet
 }
 
-//func (p *Pot) addEquity(playerBet int, player *GenericPlayer) {
-//	p.value += playerBet
-//	p.equity[player] += playerBet
-//}
-//
 func (p *Pot) getSegments() map[int][]*Player {
-	//fmt.Println("segments wooo hoo")
 
 	// First invert the map.
 	invertedMap := make(map[int][]*Player)
@@ -387,7 +382,7 @@ func (p *Pot) getSegments() map[int][]*Player {
 		fmt.Println()
 	}
 
-	//fmt.Println("Returning from getSegments().")
+	fmt.Println("Returning from getSegments().")
 	return segments
 }
 
@@ -430,7 +425,7 @@ type GenericPlayer struct {
 // http://www.golangpatterns.info/object-oriented/constructors
 // Maybe this could be replaced with new() and some helper lines.
 func NewGenericPlayer(name string) GenericPlayer {
-	ecs := getEmptyCardSet()
+	ecs := NewCardSet()
 	hc := HoleCards{cardset: &ecs}
 	initialStack := 1000 // dollars
 	newPlayer := GenericPlayer{name, nil, nil, hc, initialStack, 0,
@@ -457,7 +452,7 @@ something you do afterwards.
 */
 func (gp *GenericPlayer) preset() {
 	// Maybe NewGenericPlayer can call this?
-	ecs := getEmptyCardSet()
+	ecs := NewCardSet()
 	gp.holeCards = HoleCards{cardset: &ecs}
 	gp.bet = 0
 	gp.hasFolded = false
@@ -631,7 +626,7 @@ type CallingStationPlayer struct {
 
 // Repeating the constructor is kinda lame.
 func NewCallingStationPlayer(name string) CallingStationPlayer {
-	ecs := getEmptyCardSet()
+	ecs := NewCardSet()
 	hc := HoleCards{cardset: &ecs}
 	initialStack := 1000 // dollars
 
@@ -662,7 +657,7 @@ type FoldingPlayer struct {
 }
 
 func NewFoldingPlayer(name string) FoldingPlayer {
-	ecs := getEmptyCardSet()
+	ecs := NewCardSet()
 	hc := HoleCards{cardset: &ecs}
 	initialStack := 1000 // dollars
 
@@ -692,7 +687,8 @@ type AllInAlwaysPlayer struct {
 }
 
 func NewAllInAlwaysPlayer(name string) AllInAlwaysPlayer {
-	ecs := getEmptyCardSet()
+	//ecs := getEmptyCardSet()
+	ecs := NewCardSet()
 	hc := HoleCards{cardset: &ecs}
 	initialStack := 1000 // dollars
 
@@ -717,15 +713,15 @@ type Table struct {
 	gameCtr int
 
 	// The below get preset before each game.
-	community Community
-	button          Player
-	smallBlindValue int
+	community        Community
+	button           Player
+	smallBlindValue  int
 	smallBlindPlayer *Player
 	bigBlindValue    int
-	bigBlindPlayer *Player
-	bettingRound   string
-	deck           *Deck
-	pot            Pot
+	bigBlindPlayer   *Player
+	bettingRound     string
+	deck             *Deck
+	pot              Pot
 }
 
 // getStatus is more verbose than toString.
@@ -890,7 +886,7 @@ func (t Table) printLinkList(reverse bool, p *Player) {
 	fmt.Printf("%s -> ", player.getName())
 	time.Sleep(1000)
 	if reverse == false {
-		t.printLinkList(reverse, player.getNextPlayer())  // error (fixed)
+		t.printLinkList(reverse, player.getNextPlayer()) // error (fixed)
 	} else {
 		t.printLinkList(reverse, player.getPreviousPlayer())
 	}
@@ -1042,8 +1038,6 @@ func (t *Table) genericBet(firstBetter *Player) {
 			continue
 		}
 
-
-
 		t.getPlayerAction(&better)
 		better = *better.getNextPlayer()
 	}
@@ -1113,10 +1107,36 @@ func (t *Table) payWinners() {
 			fmt.Printf("%s, ", player.getName())
 		}
 		fmt.Println()
-		//fmt.Println(segmentAmount, "->", segmentPlayers)
+		fmt.Println(segmentAmount, "->", segmentPlayers)
+		t.payWinnersForSegment(segmentAmount, segmentPlayers)
+	}
+}
+
+func (t *Table) payWinnersForSegment(segmentValue int, players []*Player) {
+	fmt.Println("Finding the winner of the", segmentValue, "dollar segment.")
+
+	var active_players []Player
+	for _, p := range players {
+		player := *p
+
+		// You can't win if you don't play.
+		if player.checkHasFolded() {
+			continue
+		}
+		active_players = append(active_players, player)
 	}
 
+	fmt.Println("There are", len(active_players), "active players in this segment.")
+	for _, ap := range active_players {
+		fmt.Println("-", ap.getName())
+
+		// I will pay the cost of reevaluating these hands so I don't
+		// have to add more methods to the Player interface.
+		//combinedCardset := CardSet{t.community}
+
+	}
 }
+
 
 func runTournament() {
 	var table Table
@@ -1155,17 +1175,18 @@ func runTournament() {
 		table.assignInitialButtonAndBlinds()
 		table.bettingRound = "PREFLOP"
 
+		if i == 2 {
+			fmt.Println("Figure out how to pay winners then we'll continue.")
+			fmt.Println(table.getStatus())
+			os.Exit(3)
+		}
+
 		table.postBlinds()
-		fmt.Print(table.getStatus())
+		fmt.Println(table.getStatus())
 		table.dealHoleCards()
 		table.preFlopBet()
 		table.moveBetsToPot()
 		fmt.Println(table.getStatus())
-
-		if i == 2 {
-			fmt.Println("Figure out how to pay winners then we'll continue.")
-			os.Exit(3)
-		}
 
 		table.bettingRound = "FLOP"
 		fmt.Println("Dealing the flop.")
@@ -1199,16 +1220,30 @@ Each winner of each game has the best _hand_ - multiple winners are possible.
 */
 
 func main() {
-	//card := NewCard("H", 12)
-	//cardSet := NewCardSet(card)
-	//fmt.Println(cardSet)
-	//card2 := NewCard("S", 4)
-	//cardSet.add(card2)
-	//fmt.Println(cardSet)
-	//fmt.Println("Cardset:", cardSet)
-	//
+	card := NewCard("H", 12)
+	cardSet := NewCardSet(card)
+	fmt.Println(cardSet)
+	card2 := NewCard("S", 4)
+	cardSet.add(card2)
+	fmt.Println(cardSet)
+	fmt.Println("cardset1 =", cardSet)
+
 	//ecs := getEmptyCardSet()
-	//fmt.Println("ECS:", ecs)
+	ecs := NewCardSet()
+	fmt.Println("ECS:", ecs)
+
+	cs2 := NewCardSet()
+	cs2.add(NewCard("C", 13))
+	cs2.add(NewCard("C", 12))
+	fmt.Println("cardset2 =", cs2)
+
+	cs3 := cs2.combine(cardSet)
+	fmt.Println("cardset3 =", cs3)
+
+
+
+	os.Exit(3)
+
 	//
 	////holeCards := new(HoleCards)
 	//holeCards := HoleCards{cardset: &ecs}
