@@ -69,6 +69,8 @@ func (c Card) isPaired(c2 Card) bool {
 
 type CardSet struct {
 	cards []*Card
+	bestHand []*CardSet
+	possibleHands []*CardSet
 }
 
 func NewCardSet(cards ...Card) CardSet {
@@ -78,6 +80,12 @@ func NewCardSet(cards ...Card) CardSet {
 		cs.cards = append(cs.cards, &card)
 	}
 
+	// 0 evalling: D9 XD9 XD9 XD9 XD9
+	//D9 XD9 XD9 XD9 XD9: undefined with ranks: [TBD]
+	//1 evalling: HT XHT XHT XHT XHT
+	//HT XHT XHT XHT XHT: undefined with ranks: [TBD]
+	// either this or toString() is wrong
+	
 	return cs
 }
 
@@ -92,7 +100,7 @@ func (cs CardSet) toString() string {
 			continue
 		}
 
-		toString += fmt.Sprintf(" %s", c.toString())
+		toString += fmt.Sprintf(" X%s", c.toString())
 	}
 
 	return toString
@@ -120,6 +128,42 @@ func (cs *CardSet) combine(cs2 CardSet) CardSet {
 	}
 
 	return combined
+}
+
+// Find all the possible combinations.
+// I like it gross.
+func (cs *CardSet) setPossibleHands() {
+	//var possible []CardSet
+	//ctr := 0
+
+	cards := cs.cards
+	for a := 0; a < len(cards)-4; a++ {
+		for b := a+1; b < len(cards)-3; b++ {
+			for c := b+1; c < len(cards)-2; c++ {
+				for d := c+1; d < len(cards)-1; d++ {
+					for e := d+1; e < len(cards); e++ {
+						fmt.Println("here's 1 hand:", cards[a], cards[b], cards[c], cards[d], cards[e])
+						fmt.Println("here's 2 hand:", *cards[a], *cards[b], *cards[c], *cards[d], *cards[e])
+						possibleHand := NewCardSet(*cards[a], *cards[b], *cards[c], *cards[d], *cards[e])
+						fmt.Println("here's 3 hand:", possibleHand)
+						cs.possibleHands = append(cs.possibleHands, &possibleHand)
+						//cs.possibleHands = append(cs.possibleHands, []*Card{cards[a], cards[b], cards[c], cards[d], cards[e]})
+						//possible = append(possible, []*Card{cards[a], cards[b], cards[c], cards[d], cards[e]})
+						//ctr++
+					}
+				}
+			}
+		}
+	}
+}
+
+func (cs *CardSet) findBestHand() {
+	cs.setPossibleHands()
+	for i, ph := range cs.possibleHands {
+		fmt.Println(i, "evalling:", ph)
+		eval := NewEvaluation(*ph)
+		fmt.Println(eval)
+	}
 }
 
 /*
@@ -177,11 +221,11 @@ type Evaluation struct {
 	allRanks  []string
 }
 
-func NewEvaluation() *Evaluation {
+func NewEvaluation(cardset CardSet) *Evaluation {
 	var eval Evaluation
-	ecs := NewCardSet()
-	eval.cardSet = &ecs
-
+	//ecs := NewCardSet()
+	eval.cardSet = &cardset
+	eval.humanEval = "undefined"
 	return &eval
 }
 
@@ -402,6 +446,7 @@ type Player interface {
 	getBet() int
 	getStack() int
 	addHoleCard(c Card)
+	getHoleCards() CardSet
 	payBlind(blindAmount int)
 	checkHasFolded() bool
 	checkIsAllIn() bool
@@ -497,6 +542,10 @@ func (gp *GenericPlayer) getStack() int {
 
 func (gp *GenericPlayer) addHoleCard(c Card) {
 	gp.holeCards.add(c)
+}
+
+func (gp *GenericPlayer) getHoleCards() CardSet {
+	return *gp.holeCards.cardset
 }
 
 func (gp *GenericPlayer) payBlind(blindAmount int) {
@@ -1132,8 +1181,10 @@ func (t *Table) payWinnersForSegment(segmentValue int, players []*Player) {
 
 		// I will pay the cost of reevaluating these hands so I don't
 		// have to add more methods to the Player interface.
-		//combinedCardset := CardSet{t.community}
-
+		aphc := ap.getHoleCards()
+		combinedCardset := aphc.combine(*t.community.cards)
+		fmt.Println("Combined cardset:", combinedCardset)
+		combinedCardset.findBestHand()
 	}
 }
 
@@ -1220,29 +1271,29 @@ Each winner of each game has the best _hand_ - multiple winners are possible.
 */
 
 func main() {
-	card := NewCard("H", 12)
-	cardSet := NewCardSet(card)
-	fmt.Println(cardSet)
-	card2 := NewCard("S", 4)
-	cardSet.add(card2)
-	fmt.Println(cardSet)
-	fmt.Println("cardset1 =", cardSet)
-
-	//ecs := getEmptyCardSet()
-	ecs := NewCardSet()
-	fmt.Println("ECS:", ecs)
-
-	cs2 := NewCardSet()
-	cs2.add(NewCard("C", 13))
-	cs2.add(NewCard("C", 12))
-	fmt.Println("cardset2 =", cs2)
-
-	cs3 := cs2.combine(cardSet)
-	fmt.Println("cardset3 =", cs3)
-
-
-
-	os.Exit(3)
+	//card := NewCard("H", 12)
+	//cardSet := NewCardSet(card)
+	//fmt.Println(cardSet)
+	//card2 := NewCard("S", 4)
+	//cardSet.add(card2)
+	//fmt.Println(cardSet)
+	//fmt.Println("cardset1 =", cardSet)
+	//
+	////ecs := getEmptyCardSet()
+	//ecs := NewCardSet()
+	//fmt.Println("ECS:", ecs)
+	//
+	//cs2 := NewCardSet()
+	//cs2.add(NewCard("C", 13))
+	//cs2.add(NewCard("C", 12))
+	//fmt.Println("cardset2 =", cs2)
+	//
+	//cs3 := cs2.combine(cardSet)
+	//fmt.Println("cardset3 =", cs3)
+	//
+	//
+	//
+	//os.Exit(3)
 
 	//
 	////holeCards := new(HoleCards)
