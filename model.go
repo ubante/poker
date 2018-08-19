@@ -8,6 +8,7 @@ import (
 	"gopkg.in/inconshreveable/log15.v2"
 	"time"
 	"os"
+	"sort"
 )
 
 type Card struct {
@@ -173,6 +174,17 @@ func (cs CardSet) length() int {
 	return len(cs.cards)
 }
 
+func (cs CardSet) getReverseOrderedNumericRanks() []int {
+	var orderedRanks []int
+	for _, card := range cs.cards {
+		orderedRanks = append(orderedRanks, card.numericaRank)
+	}
+	sort.Sort(sort.Reverse(sort.IntSlice(orderedRanks)))
+
+
+	return orderedRanks
+}
+
 /*
 Primary ranks are:
   9: Straight flush
@@ -203,7 +215,7 @@ It is possible for different hands to have the same evaluation.
 type Evaluation struct {
 	cardSet   *CardSet
 	humanEval string
-	allRanks  []string  // do I still need this?
+	allRanks  [6]*int
 	primaryRank int
 	secondaryRank int
 	tertiaryRank int
@@ -216,6 +228,15 @@ func NewEvaluation(cardSet CardSet) *Evaluation {
 	var eval Evaluation
 	eval.cardSet = &cardSet
 	eval.evaluate()
+
+	// How to do the below in one line?
+	eval.allRanks[0] = &eval.primaryRank
+	eval.allRanks[1] = &eval.secondaryRank
+	eval.allRanks[2] = &eval.tertiaryRank
+	eval.allRanks[3] = &eval.quaternaryRank
+	eval.allRanks[4] = &eval.quinaryRank
+	eval.allRanks[5] = &eval.senaryRank
+
 	return &eval
 }
 
@@ -226,14 +247,95 @@ func (e Evaluation) String() string {
 	return toString
 }
 
+func (e Evaluation) isFlush() bool {
+	var suit string
+	for _, card := range e.cardSet.cards {
+		if suit == "" {
+			suit = card.suit
+		} else {
+			if card.suit != suit {
+				return false
+			}
+		}
+	}
+
+	return true
+}
+
+func (e Evaluation) isStraight() bool {
+	// This needs to handle a wheel straight, ie A2345.
+
+	orderedRanks := e.cardSet.getReverseOrderedNumericRanks()
+	previous := 0
+	for _, rank := range orderedRanks {
+		if previous == 0 {
+			previous = rank
+		} else {
+			if previous - rank != 1 {
+				return false
+			}
+			previous = rank
+		}
+	}
+
+	return true
+}
+
+
 func (e *Evaluation) evaluate() {
 	e.humanEval = "TBDeval"
 
+	if e.isStraight() && e.isFlush() {
+		e.humanEval = "staight flush"
+		e.primaryRank = 9
+		highestRank := e.cardSet.getReverseOrderedNumericRanks()[0]
+		if highestRank == 14 {
+			e.humanEval = "royal flush"
+		}
+		e.secondaryRank = highestRank
+		return
+	}
+
+	if e.isFlush() {
+		e.humanEval = "flush"
+		e.primaryRank = 6
+		orderedRanks := e.cardSet.getReverseOrderedNumericRanks()
+		//e.secondaryRank = 99  // fix this later
+		e.secondaryRank = orderedRanks[0]
+		e.tertiaryRank = orderedRanks[1]
+		e.quaternaryRank = orderedRanks[2]
+		e.quinaryRank = orderedRanks[3]
+		e.senaryRank = orderedRanks[4]
+		return
+	}
+
+	if e.isStraight() {
+		e.humanEval = "straight"
+		e.primaryRank = 5
+		e.secondaryRank = e.cardSet.getReverseOrderedNumericRanks()[0]
+		return
+	}
 }
 
-func (e Evaluation) compare(otherEval Evaluation) bool {
-	// TODO flesh this out
-	return false
+// This will return 1 if this Evaluation is greater than the given
+// Evaluation and will return -1 if this Evaluation is lesser than
+// the other Evaluation.  If they are even, then this will return 0.
+// Maybe use an enum?
+//
+// Greater values in rank means betterness.
+func (e Evaluation) compare(otherEval Evaluation) int {
+
+	for i := 0; i < 6; i++ {
+		fmt.Println(i, "this:", e.allRanks[i], ", other:", otherEval.allRanks[i])
+		if *e.allRanks[i] < *otherEval.allRanks[i] {
+			return -1
+		}
+		if *e.allRanks[i] > *otherEval.allRanks[i] {
+			return 1
+		}
+	}
+
+	return 0
 }
 
 type HoleCards struct {
@@ -1300,6 +1402,16 @@ func runTournament() {
 		table.bettingRound = "RIVER"
 		fmt.Println("Dealing the river.")
 		table.dealRiver()
+
+		// Mock the community cards for testing Evaluation()
+		mockedCardSet := NewCommunity()
+		mockedCardSet.add(NewCard("H", 14))
+		mockedCardSet.add(NewCard("H", 10))
+		mockedCardSet.add(NewCard("H", 12))
+		mockedCardSet.add(NewCard("H", 11))
+		mockedCardSet.add(NewCard("H", 13))
+		table.community = mockedCardSet
+
 		table.postPreFlopBet()
 		fmt.Println(table.getStatus())
 
