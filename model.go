@@ -77,15 +77,9 @@ func NewCardSet(cards ...Card) CardSet {
 	var cs CardSet
 
 	for _, card := range cards {
-		cs.cards = append(cs.cards, &card)
+		cs.add(card)
 	}
 
-	// 0 evalling: D9 XD9 XD9 XD9 XD9
-	//D9 XD9 XD9 XD9 XD9: undefined with ranks: [TBD]
-	//1 evalling: HT XHT XHT XHT XHT
-	//HT XHT XHT XHT XHT: undefined with ranks: [TBD]
-	// either this or toString() is wrong
-	
 	return cs
 }
 
@@ -100,7 +94,7 @@ func (cs CardSet) toString() string {
 			continue
 		}
 
-		toString += fmt.Sprintf(" X%s", c.toString())
+		toString += fmt.Sprintf(" %s", c.toString())
 	}
 
 	return toString
@@ -133,23 +127,14 @@ func (cs *CardSet) combine(cs2 CardSet) CardSet {
 // Find all the possible combinations.
 // I like it gross.
 func (cs *CardSet) setPossibleHands() {
-	//var possible []CardSet
-	//ctr := 0
-
 	cards := cs.cards
 	for a := 0; a < len(cards)-4; a++ {
 		for b := a+1; b < len(cards)-3; b++ {
 			for c := b+1; c < len(cards)-2; c++ {
 				for d := c+1; d < len(cards)-1; d++ {
 					for e := d+1; e < len(cards); e++ {
-						fmt.Println("here's 1 hand:", cards[a], cards[b], cards[c], cards[d], cards[e])
-						fmt.Println("here's 2 hand:", *cards[a], *cards[b], *cards[c], *cards[d], *cards[e])
 						possibleHand := NewCardSet(*cards[a], *cards[b], *cards[c], *cards[d], *cards[e])
-						fmt.Println("here's 3 hand:", possibleHand)
 						cs.possibleHands = append(cs.possibleHands, &possibleHand)
-						//cs.possibleHands = append(cs.possibleHands, []*Card{cards[a], cards[b], cards[c], cards[d], cards[e]})
-						//possible = append(possible, []*Card{cards[a], cards[b], cards[c], cards[d], cards[e]})
-						//ctr++
 					}
 				}
 			}
@@ -189,8 +174,6 @@ func (cs CardSet) length() int {
 }
 
 /*
-Not sure this should be a struct.
-
 Primary ranks are:
   9: Straight flush
   8: Four of a kind
@@ -214,37 +197,55 @@ would be the numeric value of the pair.
 This just goes on and on.  For a flush and high card, it is
 possible to have a rank for each of the five cards.  For the
 other types of hands, these will remain at zero.
+
+It is possible for different hands to have the same evaluation.
 */
 type Evaluation struct {
 	cardSet   *CardSet
 	humanEval string
-	allRanks  []string
+	allRanks  []string  // do I still need this?
+	primaryRank int
+	secondaryRank int
+	tertiaryRank int
+	quaternaryRank int
+	quinaryRank int
+	senaryRank int
 }
 
-func NewEvaluation(cardset CardSet) *Evaluation {
+func NewEvaluation(cardSet CardSet) *Evaluation {
 	var eval Evaluation
-	//ecs := NewCardSet()
-	eval.cardSet = &cardset
-	eval.humanEval = "undefined"
+	eval.cardSet = &cardSet
+	eval.evaluate()
 	return &eval
 }
 
 func (e Evaluation) String() string {
-	toString := fmt.Sprintf("%s: %s with ranks: [TBD]", e.cardSet, e.humanEval)
+	toString := fmt.Sprintf("%s: %s with ranks: [%d %d %d %d %d %d]", e.cardSet, e.humanEval,
+		e.primaryRank, e.secondaryRank, e.tertiaryRank, e.quaternaryRank, e.quinaryRank, e.senaryRank)
 
 	return toString
 }
 
+func (e *Evaluation) evaluate() {
+	e.humanEval = "TBDeval"
+
+}
+
+func (e Evaluation) compare(otherEval Evaluation) bool {
+	// TODO flesh this out
+	return false
+}
+
 type HoleCards struct {
-	cardset *CardSet
+	cardSet *CardSet
 }
 
 func (hc *HoleCards) toString() string {
-	if hc.cardset == nil {
+	if hc.cardSet == nil {
 		return ""
 	}
 
-	return hc.cardset.toString()
+	return hc.cardSet.toString()
 }
 
 func (hc HoleCards) String() string {
@@ -252,12 +253,12 @@ func (hc HoleCards) String() string {
 }
 
 func (hc *HoleCards) add(c Card) {
-	hc.cardset.add(c)
+	hc.cardSet.add(c)
 }
 
 func (hc *HoleCards) empty() {
 	ecs := NewCardSet()
-	hc.cardset = &ecs
+	hc.cardSet = &ecs
 }
 
 func (hc *HoleCards) toss() {
@@ -471,7 +472,7 @@ type GenericPlayer struct {
 // Maybe this could be replaced with new() and some helper lines.
 func NewGenericPlayer(name string) GenericPlayer {
 	ecs := NewCardSet()
-	hc := HoleCards{cardset: &ecs}
+	hc := HoleCards{cardSet: &ecs}
 	initialStack := 1000 // dollars
 	newPlayer := GenericPlayer{name, nil, nil, hc, initialStack, 0,
 		false, false}
@@ -498,7 +499,7 @@ something you do afterwards.
 func (gp *GenericPlayer) preset() {
 	// Maybe NewGenericPlayer can call this?
 	ecs := NewCardSet()
-	gp.holeCards = HoleCards{cardset: &ecs}
+	gp.holeCards = HoleCards{cardSet: &ecs}
 	gp.bet = 0
 	gp.hasFolded = false
 	gp.isAllIn = false
@@ -545,7 +546,7 @@ func (gp *GenericPlayer) addHoleCard(c Card) {
 }
 
 func (gp *GenericPlayer) getHoleCards() CardSet {
-	return *gp.holeCards.cardset
+	return *gp.holeCards.cardSet
 }
 
 func (gp *GenericPlayer) payBlind(blindAmount int) {
@@ -669,6 +670,7 @@ func (gp *GenericPlayer) checkIsAllIn() bool {
 	return gp.isAllIn
 }
 
+// This Player will always call.
 type CallingStationPlayer struct {
 	GenericPlayer
 }
@@ -676,7 +678,7 @@ type CallingStationPlayer struct {
 // Repeating the constructor is kinda lame.
 func NewCallingStationPlayer(name string) CallingStationPlayer {
 	ecs := NewCardSet()
-	hc := HoleCards{cardset: &ecs}
+	hc := HoleCards{cardSet: &ecs}
 	initialStack := 1000 // dollars
 
 	newPlayer := new(CallingStationPlayer)
@@ -701,13 +703,17 @@ func (csp *CallingStationPlayer) chooseAction(t *Table) {
 
 }
 
+// This Player will check if able, otherwise will fold.  This models an
+// online player who has disconnected.  If the present players are
+// aggressive enough, it is common to see a FoldingPlayer make it to the
+// money.
 type FoldingPlayer struct {
 	GenericPlayer
 }
 
 func NewFoldingPlayer(name string) FoldingPlayer {
 	ecs := NewCardSet()
-	hc := HoleCards{cardset: &ecs}
+	hc := HoleCards{cardSet: &ecs}
 	initialStack := 1000 // dollars
 
 	newPlayer := new(FoldingPlayer)
@@ -731,14 +737,14 @@ func (fp *FoldingPlayer) chooseAction(t *Table) {
 	}
 }
 
+// This Player is pure aggro.  He will always shove.
 type AllInAlwaysPlayer struct {
 	GenericPlayer
 }
 
 func NewAllInAlwaysPlayer(name string) AllInAlwaysPlayer {
-	//ecs := getEmptyCardSet()
 	ecs := NewCardSet()
-	hc := HoleCards{cardset: &ecs}
+	hc := HoleCards{cardSet: &ecs}
 	initialStack := 1000 // dollars
 
 	newPlayer := new(AllInAlwaysPlayer)
@@ -753,6 +759,46 @@ func (ap *AllInAlwaysPlayer) chooseAction(t *Table) {
 	fmt.Println("I am always all-in always.")
 	ap.allIn()
 }
+
+// This Player is a calling station unless the current bet is >=5x his
+// current bet.  In that case, he will fold.
+type CallToFivePlayer struct {
+	GenericPlayer
+}
+
+func NewCallToFivePlayer(name string) CallToFivePlayer {
+	ecs := NewCardSet()
+	hc := HoleCards{cardSet: &ecs}
+	initialStack := 1000 // dollars
+
+	newPlayer := new(CallToFivePlayer)
+	newPlayer.name = name
+	newPlayer.holeCards = hc
+	newPlayer.stack = initialStack
+
+	return *newPlayer
+}
+
+func (ct5p *CallToFivePlayer) chooseAction(t *Table) {
+	fmt.Println("This is CT5 overriding chooseAction")
+	currentTableBet := t.getMaxBet()
+
+	if currentTableBet >= 5*ct5p.bet {
+		fmt.Printf("My bet ($%d) is less than a fifth of the table's bet ($%d) so folding.\n",
+			ct5p.bet, currentTableBet)
+		ct5p.fold()
+	} else if currentTableBet > ct5p.bet {
+		fmt.Printf("My bet ($%d) is below the table's bet ($%d) so calling.\n", ct5p.bet, currentTableBet)
+		ct5p.call(t)
+	} else {
+		fmt.Printf("My bet ($%d) is >= the table bet ($%d) so just checking.\n", ct5p.bet, currentTableBet)
+		ct5p.check(t)
+	}
+
+}
+
+// These are future players.
+
 
 /**
 This breaks my brain.
@@ -1164,7 +1210,7 @@ func (t *Table) payWinners() {
 func (t *Table) payWinnersForSegment(segmentValue int, players []*Player) {
 	fmt.Println("Finding the winner of the", segmentValue, "dollar segment.")
 
-	var active_players []Player
+	var activePlayers []Player
 	for _, p := range players {
 		player := *p
 
@@ -1172,11 +1218,11 @@ func (t *Table) payWinnersForSegment(segmentValue int, players []*Player) {
 		if player.checkHasFolded() {
 			continue
 		}
-		active_players = append(active_players, player)
+		activePlayers = append(activePlayers, player)
 	}
 
-	fmt.Println("There are", len(active_players), "active players in this segment.")
-	for _, ap := range active_players {
+	fmt.Println("There are", len(activePlayers), "active players in this segment.")
+	for _, ap := range activePlayers {
 		fmt.Println("-", ap.getName())
 
 		// I will pay the cost of reevaluating these hands so I don't
@@ -1203,9 +1249,9 @@ func runTournament() {
 	table.addPlayer(&temp4)
 	temp5 := NewGenericPlayer("Eyor")
 	table.addPlayer(&temp5)
-	temp6 := NewFoldingPlayer("Fred")
+	temp6 := NewCallToFivePlayer("Fred")
 	table.addPlayer(&temp6)
-	temp7 := NewGenericPlayer("Greg")
+	temp7 := NewFoldingPlayer("Greg")
 	table.addPlayer(&temp7)
 	temp8 := NewGenericPlayer("Hill")
 	table.addPlayer(&temp8)
@@ -1291,7 +1337,15 @@ func main() {
 	//cs3 := cs2.combine(cardSet)
 	//fmt.Println("cardset3 =", cs3)
 	//
+	//cs4 := NewCardSet(card, card2)
+	//fmt.Println("cardset4 =", cs4)
 	//
+	//cs5 := NewCardSet(card, card2, NewCard("C", 4))
+	//fmt.Println("using type:", reflect.TypeOf(card2))
+	//fmt.Println("cardset5 =", cs5)
+	//for i, c := range cs5.cards {
+	//	fmt.Println(i, c)
+	//}
 	//
 	//os.Exit(3)
 
