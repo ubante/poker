@@ -255,6 +255,7 @@ type Evaluation struct {
 	quaternaryRank int
 	quinaryRank int
 	senaryRank int
+	flattenedScore int  // A simple way to score the hand.  Higher is better.
 }
 
 func NewEvaluation(cardSet CardSet) *Evaluation {
@@ -344,7 +345,26 @@ func (e Evaluation) hasMatches() map[int][]int {
 	return matches
 }
 
+// This will flatten the allRanks array into an int preserving
+// ordinality. This could be more compact by using powers of 13 but then
+// I'd have to cast to float64 to use Pow.  smh
+func (e *Evaluation) flattenScore() {
+	e.flattenedScore = 0
+	for _, subScore := range e.allRanks {
+		e.flattenedScore *= 100
+		e.flattenedScore += *subScore
+	}
+
+	fmt.Println("Flattened", e.allRanks, "to", e.flattenedScore)
+}
+
+// This is because defer cannot call methods.  Yeah, I did it.  Wot?
+func notAMethodFlattenScore(e *Evaluation) {
+	e.flattenScore()
+}
+
 func (e *Evaluation) evaluate() {
+	defer notAMethodFlattenScore(e)
 	e.humanEval = "TBDeval"
 
 	if e.isStraight() && e.isFlush() {
@@ -618,6 +638,9 @@ and PlayerC.
 
 Note that bets do not enter a pot until all betting is complete for
 the round.
+
+TODO: maybe this all needs to be redone.  We only need segments when
+      a player goes all-in.
 */
 type Pot struct {
 	value  int // This could be gotten from summing equity.
@@ -649,6 +672,7 @@ func (p *Pot) addEquity(playerBet int, player *Player) {
 	p.equity[player] += playerBet
 }
 
+// This is part of the old calculations.
 func (p *Pot) getSegments() map[int][]*Player {
 
 	// First invert the map.
@@ -680,6 +704,15 @@ func (p *Pot) getSegments() map[int][]*Player {
 	fmt.Println("Returning from getSegments().")
 	return segments
 }
+
+// This is the new and improved pot.
+type Pot2 struct {
+
+}
+
+
+
+
 
 // This is probably an anti-pattern.
 type Player interface {
@@ -1540,6 +1573,19 @@ func (t *Table) dealRiver() {
 func (t *Table) payWinners() {
 	fmt.Println("The pot:", t.pot)
 
+	// Find all the players still in it and find their hand strength.
+
+	// Order the players by hand strengths.
+
+	// Send all the hand strengths to the pot to find payouts.
+
+
+	// Pay the players.
+
+
+
+
+	// The below is crap v1.
 	// To properly test this loop, we need different player types first.
 	// TODO: the below block should start with the lowest segments first
 	//       so we can roll up unclaimed payouts to the next highest
@@ -1649,10 +1695,10 @@ func runTournament() {
 	table.addPlayer(&temp4)
 	temp5 := NewGenericPlayer("Eyor")
 	table.addPlayer(&temp5)
-	//temp6 := NewFoldingPlayer("Fred")
-	//table.addPlayer(&temp6)
-	//temp7 := NewCallToFivePlayer("Greg")
-	//table.addPlayer(&temp7)
+	temp6 := NewFoldingPlayer("Fred")
+	table.addPlayer(&temp6)
+	temp7 := NewCallToFivePlayer("Greg")
+	table.addPlayer(&temp7)
 	temp8 := NewGenericPlayer("Hill")
 	table.addPlayer(&temp8)
 	temp9 := NewGenericPlayer("Igor")
