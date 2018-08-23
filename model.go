@@ -270,6 +270,7 @@ func NewEvaluation(cardSet CardSet) *Evaluation {
 	eval.allRanks[3] = &eval.quaternaryRank
 	eval.allRanks[4] = &eval.quinaryRank
 	eval.allRanks[5] = &eval.senaryRank
+	eval.flattenScore()
 
 	return &eval
 }
@@ -350,21 +351,25 @@ func (e Evaluation) hasMatches() map[int][]int {
 // I'd have to cast to float64 to use Pow.  smh
 func (e *Evaluation) flattenScore() {
 	e.flattenedScore = 0
+	//fmt.Println(e, "Starting with e.flattenedScore of", e.flattenedScore)
 	for _, subScore := range e.allRanks {
 		e.flattenedScore *= 100
-		e.flattenedScore += *subScore
+		//fmt.Println("at subscore of", *subScore, "e.flattenedScore is now", e.flattenedScore)
+		e.flattenedScore += *subScore  // this line panics
 	}
 
-	fmt.Println("Flattened", e.allRanks, "to", e.flattenedScore)
+	//fmt.Println("Flattened", e.allRanks, "to", e.flattenedScore)
 }
 
-// This is because defer cannot call methods.  Yeah, I did it.  Wot?
-func notAMethodFlattenScore(e *Evaluation) {
-	e.flattenScore()
-}
+// This is because defer can call functions but cannot call methods.
+// Yeah, I did it.  Wot?
+//func notAMethodFlattenScore(e *Evaluation) {
+//	fmt.Println("flattening:", e)
+//	e.flattenScore()
+//}
 
 func (e *Evaluation) evaluate() {
-	defer notAMethodFlattenScore(e)
+	//defer notAMethodFlattenScore(e)
 	e.humanEval = "TBDeval"
 
 	if e.isStraight() && e.isFlush() {
@@ -647,6 +652,8 @@ type Pot struct {
 	equity map[*Player]int
 }
 
+// Couldn't this be replaced with new(Pot)?  At least there's some
+// consistency.
 func NewPot() Pot {
 	var pot Pot
 
@@ -705,16 +712,33 @@ func (p *Pot) getSegments() map[int][]*Player {
 	return segments
 }
 
-// This is the new and improved pot.
-type Pot2 struct {
+// The pot type should do the calculations of deciding how much each
+// player gets.  While it _could_ pay the players, that is best done
+// by something else.
+func (p *Pot) getPayments(scores map[*Player]int) map[*Player]int {
+	//var payments map[*Player]int
+	payments := make(map[*Player]int)
 
+	fmt.Println("Time to payout:")
+	fmt.Println(p)
+
+	// If a single player with the strongest hand has max equity,
+	// then she gets the whole pot.
+	// If there are N such players, they split the pot.
+	// If the strongest hand does not have max equity, we need multiple
+	// pots.
+	for p := range scores {
+		pp := *p
+		payments[p] = 5
+		fmt.Println(pp.getName(), "won", 5)
+	}
+	return payments
 }
 
 
 
 
-
-// This is probably an anti-pattern.
+// This is most-likely an anti-pattern.
 type Player interface {
 	fold()
 	allIn()
@@ -726,6 +750,7 @@ type Player interface {
 	getPreviousPlayer() *Player
 	setName(n string)
 	getName() string
+	raise(raiseAmount int)
 	setBet(newBet int)
 	getBet() int
 	addToStack(payout int)
@@ -1574,39 +1599,60 @@ func (t *Table) payWinners() {
 	fmt.Println("The pot:", t.pot)
 
 	// Find all the players still in it and find their hand strength.
+	fmt.Println("Finding the still active players.")
+	var activePlayers []*Player
+	//playerScoresX := make(map[*Player]CardSet)
+	playerScores := make(map[*Player]int)
+	for _, p := range t.players {
+		player := *p
+		if player.checkHasFolded() {
+			continue
+		}
 
-	// Order the players by hand strengths.
+		activePlayers = append(activePlayers, p)
+
+		// Evaluate the players' hand strengths.
+		fmt.Println("Evaluating the hand of", player.getName())
+		hc := player.getHoleCards()
+		combinedCardSet := hc.combine(*t.community.cards) // 7 cards.
+		combinedCardSet.findBestHand()
+		fmt.Printf("%s's best hand is: %s\n", player.getName(), combinedCardSet.bestEval)
+		//playerScoresX[p] = combinedCardSet
+		playerScores[p] = combinedCardSet.bestEval.flattenedScore
+	}
 
 	// Send all the hand strengths to the pot to find payouts.
-
+	payments := t.pot.getPayments(playerScores)
 
 	// Pay the players.
-
-
-
+	fmt.Println("Paying the winners finally.")
+	for p := range payments {
+		pp := *p
+		fmt.Println(pp.getName(), "gets", payments[p])
+	}
 
 	// The below is crap v1.
 	// To properly test this loop, we need different player types first.
 	// TODO: the below block should start with the lowest segments first
 	//       so we can roll up unclaimed payouts to the next highest
 	//       segment.
-	for segmentAmount, segmentPlayers := range t.pot.getSegments() {
-		// The logic in Pot could be made better so we don't have to do
-		// this block.
-		if segmentAmount == 0 {
-			continue
-		}
-
-		fmt.Printf("$%d: ", segmentAmount)
-		for _, p := range segmentPlayers {
-			player := *p
-			fmt.Printf("%s, ", player.getName())
-		}
-		fmt.Println()
-		fmt.Println(segmentAmount, "->", segmentPlayers)
-		segmentValue := segmentAmount * len(segmentPlayers)
-		t.payWinnersForSegment(segmentValue, segmentPlayers)
-	}
+	//for segmentAmount, segmentPlayers := range t.pot.getSegments() {
+	//	// The logic in Pot could be made better so we don't have to do
+	//	// this block.
+	//	if segmentAmount == 0 {
+	//		continue
+	//	}
+	//
+	//	fmt.Printf("$%d: ", segmentAmount)
+	//	for _, p := range segmentPlayers {
+	//		player := *p
+	//		fmt.Printf("%s, ", player.getName())
+	//	}
+	//	fmt.Println()
+	//	fmt.Println(segmentAmount, "->", segmentPlayers)
+	//	segmentValue := segmentAmount * len(segmentPlayers)
+	//	t.payWinnersForSegment(segmentValue, segmentPlayers)
+	//}
 }
 
 func (t *Table) payWinnersForSegment(segmentValue int, players []*Player) {
@@ -1758,13 +1804,13 @@ func runTournament() {
 		table.dealRiver()
 
 		// Mock the community cards for testing Evaluation()
-		mockedCardSet := NewCommunity()
-		mockedCardSet.add(NewCard("H", 11))
-		mockedCardSet.add(NewCard("H", 6))
-		mockedCardSet.add(NewCard("C", 11))
-		mockedCardSet.add(NewCard("S", 11))
-		mockedCardSet.add(NewCard("C", 6))
-		table.community = mockedCardSet
+		//mockedCardSet := NewCommunity()
+		//mockedCardSet.add(NewCard("H", 11))
+		//mockedCardSet.add(NewCard("H", 6))
+		//mockedCardSet.add(NewCard("C", 11))
+		//mockedCardSet.add(NewCard("S", 11))
+		//mockedCardSet.add(NewCard("C", 6))
+		//table.community = mockedCardSet
 
 		table.postPreFlopBet()
 		table.moveBetsToPot()
@@ -1782,6 +1828,11 @@ Each tournament has multiple poker _games_.
 Each game has multiple betting _rounds_.
 Each winner of each game has the best _hand_ - multiple winners are possible.
 */
+
+// This is just to cast a GenericPlayer to Player.
+func castToPlayer(player Player) Player {
+	return player
+}
 
 func main() {
 	//card := NewCard("H", 12)
@@ -1841,6 +1892,44 @@ func main() {
 		H12 S4 D2 D3 D4 D5 D6 D7 D8 D9 D10 D11 D12 D13 D14
 		D11 D10 D14 D3 D2 D7 D12 S4 H12 D6 D4 D5 D8 D13 D9
 	*/
+
+	// This will test the new pot.
+	//pot := NewPot()
+	//
+	//temp6a := NewGenericPlayer("Fred")
+	//temp6a.stack = 250
+	//temp6i := castToPlayer(&temp6a)
+	//temp7a := NewGenericPlayer("Ginger")
+	//temp7i := castToPlayer(&temp7a)
+	//temp8a := NewGenericPlayer("Harold")
+	//temp8i := castToPlayer(&temp8a)
+	//temp9a := NewCallingStationPlayer("Kyle")
+	//temp9i := castToPlayer(&temp9a)
+	//players := []*Player{&temp6i, &temp7i, &temp8i, &temp9i}
+	//for _, p := range players {
+	//	pp := *p
+	//	pp.raise(100)
+	//	fmt.Println(pp)
+	//}
+	//fmt.Println(pot)
+	//for _, p := range players {
+	//	pp := *p
+	//	pot.addEquity(pp.getBet(), p)
+	//}
+	//fmt.Println(pot)
+	//temp6i.allIn()
+	//temp7i.fold()
+	//temp8i.raise(200)
+	//temp9i.raise(200)
+	//for _, p := range players {
+	//	pp := *p
+	//	pot.addEquity(pp.getBet(), p)
+	//	fmt.Println(pp)
+	//}
+	//fmt.Println("\nFred is all in; Ginger has folded.")
+	//fmt.Println(pot)
+	//
+	//os.Exit(7)
 
 	for i := 1; i <= 2; i++ {
 		fmt.Println(">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>")
