@@ -11,8 +11,17 @@ import (
 	"sort"
 )
 
-// I'll try to follow Robert's Rules for Poker.
-// http://www.pokercoach.us/RobsPkrRules11.doc
+/*
+Trying to stick to the definitions in https://www.pokernews.com/pokerterms/reraise.htm
+and the rules in http://www.pokercoach.us/RobsPkrRules11.doc
+
+In addition to those definitions:
+  - hand: the five cards a player constructs
+  - round: a betting stage; there are four per game: preflop/flop/turn/river
+  - game: what happens between the shuffling of the deck
+  - tournament: from the first game until there's only one player left
+ */
+
 type Card struct {
 	suit         string
 	numericaRank int
@@ -602,8 +611,7 @@ func NewCommunity() Community {
 	return c
 }
 
-// My first String().  Will eventually replace all the getStatus()
-// methods.
+// Will eventually replace all the getStatus() methods.
 func (c Community) String() string {
 	return c.cards.String()
 	//return c.cards.getStatus()
@@ -612,6 +620,136 @@ func (c Community) String() string {
 func (c *Community) add(card Card) {
 	c.cards.add(card)
 }
+
+type SubPot struct {
+	amount              int
+	contributingPlayers []*Player
+}
+
+func (sp SubPot) String() string {
+	toString := fmt.Sprintf("$%d: ", sp.amount)
+	for _, cp := range sp.contributingPlayers {
+		cpp := *cp
+		toString += fmt.Sprintf("%s, ", cpp.getName())
+	}
+	return toString
+}
+
+
+func (sp SubPot) contains(player *Player) bool {
+	// This could have been a map but then I'd have to convert the slice
+	// in NewPot.
+	for _, cp := range sp.contributingPlayers {
+		if cp == player {
+			return true
+		}
+	}
+	return false
+}
+
+func (sp *SubPot) deposit(player *Player, amount int) {
+	pp := *player
+	if ! sp.contains(player) {
+		sp.contributingPlayers = append(sp.contributingPlayers, player)
+	}
+	sp.amount += amount
+	pp.setBet(pp.getBet() - amount)
+}
+
+type Pot struct {
+	subPots []*SubPot  // The first SubPot is the main pot.
+	subPotIndex int
+}
+
+func (pot Pot) String() string {
+	toString := fmt.Sprintf("POT total is $%d", pot.getValue())
+	for i, sp := range pot.subPots {
+		toString += fmt.Sprintf("\npot #%d, %s", i, *sp)
+	}
+	return toString
+}
+
+func NewPot(players []*Player) Pot {
+	var pot Pot
+
+	aSubPot := SubPot{contributingPlayers: players, amount: 0}
+	pot.subPots = append(pot.subPots, &aSubPot)
+	pot.subPotIndex = 0
+
+	return pot
+}
+
+func (pot *Pot) getValue() int {
+	value := 0
+	for _, sp := range pot.subPots {
+		value += sp.amount
+	}
+
+	return value
+}
+
+func (pot *Pot) recordRoundBets(players []*Player) {
+	// First find all-in players with bets.
+
+	// Loop through them in ascending order by Player.bet.
+		// Loop through all the players with bets.
+			// Deposit their bets (up to the current all-in player's
+			// bet) into the current subPot.
+		// Create a new subPot and move the index.
+
+	// Catch the rest of the bets by looping over all players with bets.
+	for _, p := range players {
+		pp := *p
+		if pp.getBet() == 0 {
+			continue
+		}
+
+		// Deposit their bets in its entirety into the current subPot.
+		pot.subPots[pot.subPotIndex].deposit(p, pp.getBet())
+	}
+}
+
+func (pot *Pot) getWinnings(playerScores map[*Player]int) map[*Player]int {
+	winnings := make(map[*Player]int)
+
+	// Loop through all the subPots.
+	for i, sp := range pot.subPots {
+
+		// Find the contributingPlayer(s) with the highest score.
+		highestScore := 0
+		var subPotWinners []*Player
+
+		for _, cp := range sp.contributingPlayers {
+			if playerScores[cp] > highestScore {
+				highestScore = playerScores[cp]
+				subPotWinners = nil
+				subPotWinners = append(subPotWinners, cp)
+			} else if playerScores[cp] == highestScore {
+				subPotWinners = append(subPotWinners, cp)
+			}
+		}
+		fmt.Println("3 We have winners:", len(subPotWinners))
+		fmt.Printf("SubPot #%d was won by ", i)
+		for _, spw := range subPotWinners {
+			spwp := *spw
+			fmt.Printf("%s, ", spwp.getName())
+
+			// Tally their winnings.
+			if _, ok := winnings[spw]; ok {
+				winnings[spw] += sp.amount/len(subPotWinners)
+			} else {
+				winnings[spw] = sp.amount/len(subPotWinners)
+			}
+		}
+		fmt.Println()
+
+
+
+	}
+
+	return winnings
+}
+
 
 /*
 In live poker, there can be multiple pots when someone goes in but
@@ -651,16 +789,17 @@ We only need segments when a player goes all-in.  The original approach
 wsa based on map[*Player]int.  The difficult scenario is when the all-in
 player and a non-all-in player tie for best hand.
 */
-type Pot struct {
+type OldPot struct {
 	value  int
-	equity map[*Player]int
-	sidePots []*Pot
+	involvedPlayers []*Player
+	equity map[*Player]int  // Try not to use this in new Pot.
+	sidePots []*OldPot
 }
 
 // Couldn't this be replaced with new(Pot)?  At least there's some
 // consistency.
-func NewPot() Pot {
-	var pot Pot
+func NewOldPot() OldPot {
+	var pot OldPot
 
 	pot.value = 0
 	pot.equity = make(map[*Player]int)
@@ -668,7 +807,7 @@ func NewPot() Pot {
 	return pot
 }
 
-func (pot Pot) String() string {
+func (pot OldPot) String() string {
 	toString := fmt.Sprintf("POT is $%d\n", pot.value)
 
 	for p, value := range pot.equity {
@@ -679,14 +818,14 @@ func (pot Pot) String() string {
 	return toString
 }
 
-func (pot *Pot) depositBets(players []*Player) {
+func (pot *OldPot) depositBets(players []*Player) {
 	for _, p := range players {
 		pp := *p
 		pot.value += pp.getBet()
 	}
 }
 
-func (pot *Pot) recordRoundBets(players []*Player) {
+func (pot *OldPot) recordRoundBets(players []*Player) {
 	// Put all the bets into the main pot if either of these are true:
 	// - noone is all in
 	// - the non-folded player bets are equal
@@ -738,17 +877,19 @@ func (pot *Pot) recordRoundBets(players []*Player) {
 	// This would lead to just one side-pot.  A real world example is
 	// the second round of a tournament.  If two people go all-in with
 	// their initial stack, this would not create two sidepots.
-	
+
+	// Make a reverse map.
+
 
 }
 
-func (pot *Pot) addEquity(playerBet int, player *Player) {
+func (pot *OldPot) addEquity(playerBet int, player *Player) {
 	pot.value += playerBet
 	pot.equity[player] += playerBet
 }
 
 // This is part of the old calculations.
-func (pot *Pot) getSegments() map[int][]*Player {
+func (pot *OldPot) getSegments() map[int][]*Player {
 
 	// First invert the map.
 	invertedMap := make(map[int][]*Player)
@@ -780,7 +921,7 @@ func (pot *Pot) getSegments() map[int][]*Player {
 	return segments
 }
 
-func (pot Pot) getGreatestEquity() int {
+func (pot OldPot) getGreatestEquity() int {
 	greatest := 0
 	for e := range pot.equity {
 		if pot.equity[e] > greatest {
@@ -800,7 +941,7 @@ func (pot Pot) getGreatestEquity() int {
 // - If there are N such players, they split the pot.
 // - If the strongest hand does not have max equity, we need extra
 // payments.
-func (pot *Pot) getPayments(playerScores map[*Player]int) map[*Player]int {
+func (pot *OldPot) getPayments(playerScores map[*Player]int) map[*Player]int {
 	payments := make(map[*Player]int)
 
 	// First reverse the input map.
@@ -1353,7 +1494,7 @@ func (t *Table) getStatus() string {
 		status += fmt.Sprintf("%s\n", *player)
 	}
 
-	status += fmt.Sprintf("Pot: %d\n", t.pot.value)
+	status += fmt.Sprintf("Pot: %d\n", t.pot.getValue())
 	status += fmt.Sprintf("Community: %s\n", t.community)
 	status += "------\n"
 	return status
@@ -1377,7 +1518,7 @@ func (t *Table) preset() {
 
 	t.deck = NewDeck()
 	t.deck.shuffle()
-	t.pot = NewPot()
+	t.pot = NewPot(t.players)
 	t.community = NewCommunity()
 
 	for _, p := range t.players {
@@ -1703,10 +1844,10 @@ func (t *Table) moveBetsToPot() {
 	t.pot.recordRoundBets(t.players)
 
 	// Then clear out each player's bets.
-	for _, p := range t.players {
-		player := *p
-		player.setBet(0)
-	}
+	//for _, p := range t.players {
+	//	player := *p
+	//	player.setBet(0)
+	//}
 
 }
 
@@ -1754,7 +1895,7 @@ func (t *Table) payWinners() {
 	}
 
 	// Send all the hand strengths to the pot to find payouts.
-	payments := t.pot.getPayments(playerScores)
+	payments := t.pot.getWinnings(playerScores)
 
 	// Pay the players.
 	fmt.Println("Paying the winners finally.")
@@ -1937,13 +2078,13 @@ func runTournament() {
 		table.dealRiver()
 
 		// Mock the community cards for testing Evaluation()
-		//mockedCardSet := NewCommunity()
-		//mockedCardSet.add(NewCard("H", 11))
-		//mockedCardSet.add(NewCard("H", 6))
-		//mockedCardSet.add(NewCard("C", 11))
-		//mockedCardSet.add(NewCard("S", 11))
-		//mockedCardSet.add(NewCard("C", 6))
-		//table.community = mockedCardSet
+		mockedCardSet := NewCommunity()
+		mockedCardSet.add(NewCard("H", 11))
+		mockedCardSet.add(NewCard("H", 6))
+		mockedCardSet.add(NewCard("C", 11))
+		mockedCardSet.add(NewCard("S", 11))
+		mockedCardSet.add(NewCard("C", 6))
+		table.community = mockedCardSet
 
 		table.postPreFlopBet()
 		table.moveBetsToPot()
@@ -2027,7 +2168,7 @@ func main() {
 	*/
 
 	// This will test the new pot.
-	//pot := NewPot()
+	//pot := NewOldPot()
 	//
 	//temp6a := NewGenericPlayer("Fred")
 	//temp6a.stack = 250
