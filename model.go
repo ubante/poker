@@ -11,6 +11,8 @@ import (
 	"sort"
 )
 
+// I'll try to follow Robert's Rules for Poker.
+// http://www.pokercoach.us/RobsPkrRules11.doc
 type Card struct {
 	suit         string
 	numericaRank int
@@ -644,12 +646,15 @@ and PlayerC.
 Note that bets do not enter a pot until all betting is complete for
 the round.
 
-TODO: maybe this all needs to be redone.  We only need segments when
-      a player goes all-in.
+TODO: maybe this all needs to be redone.
+We only need segments when a player goes all-in.  The original approach
+wsa based on map[*Player]int.  The difficult scenario is when the all-in
+player and a non-all-in player tie for best hand.
 */
 type Pot struct {
-	value  int // This could be gotten from summing equity.
+	value  int
 	equity map[*Player]int
+	sidePots []*Pot
 }
 
 // Couldn't this be replaced with new(Pot)?  At least there's some
@@ -663,10 +668,10 @@ func NewPot() Pot {
 	return pot
 }
 
-func (p Pot) String() string {
-	toString := fmt.Sprintf("POT is $%d\n", p.value)
+func (pot Pot) String() string {
+	toString := fmt.Sprintf("POT is $%d\n", pot.value)
 
-	for p, value := range p.equity {
+	for p, value := range pot.equity {
 		player := *p
 		toString += fmt.Sprintf("%s has equity: $%d\n", player.getName(), value)
 	}
@@ -674,17 +679,80 @@ func (p Pot) String() string {
 	return toString
 }
 
-func (p *Pot) addEquity(playerBet int, player *Player) {
-	p.value += playerBet
-	p.equity[player] += playerBet
+func (pot *Pot) depositBets(players []*Player) {
+	for _, p := range players {
+		pp := *p
+		pot.value += pp.getBet()
+	}
+}
+
+func (pot *Pot) recordRoundBets(players []*Player) {
+	// Put all the bets into the main pot if either of these are true:
+	// - noone is all in
+	// - the non-folded player bets are equal
+
+	nooneIsAllIn := true
+	for _, p := range players {
+		pp := *p
+		if pp.checkIsAllIn() {
+			nooneIsAllIn = false
+			break
+		}
+	}
+	if nooneIsAllIn {
+		pot.depositBets(players)
+		return
+	}
+
+	equalBets := true
+	aBet := 0
+	for _, p := range players {
+		pp := *p
+		if pp.checkHasFolded() {
+			continue
+		}
+
+		if aBet == 0 {
+			aBet = pp.getBet()
+			continue
+		}
+
+		if pp.getBet() == aBet {
+			continue
+		}
+
+		equalBets = false
+		break
+	}
+	// This handles the case of a player going all-in, and some people
+	// calls but no one raises.
+	if equalBets {
+		pot.depositBets(players)
+		return
+	}
+
+	// At this point, we need side pots.  Note that multiple people can
+	// go all in during the same betting round.  We will need a sidepot
+	// for each unique amount that was a player's final bet.  It is
+	// possible for multiple players to go all-in for the same amount.
+	// This would lead to just one side-pot.  A real world example is
+	// the second round of a tournament.  If two people go all-in with
+	// their initial stack, this would not create two sidepots.
+	
+
+}
+
+func (pot *Pot) addEquity(playerBet int, player *Player) {
+	pot.value += playerBet
+	pot.equity[player] += playerBet
 }
 
 // This is part of the old calculations.
-func (p *Pot) getSegments() map[int][]*Player {
+func (pot *Pot) getSegments() map[int][]*Player {
 
 	// First invert the map.
 	invertedMap := make(map[int][]*Player)
-	for p, equity := range p.equity {
+	for p, equity := range pot.equity {
 		player := *p
 		invertedMap[equity] = append(invertedMap[equity], &player)
 	}
@@ -712,26 +780,81 @@ func (p *Pot) getSegments() map[int][]*Player {
 	return segments
 }
 
+func (pot Pot) getGreatestEquity() int {
+	greatest := 0
+	for e := range pot.equity {
+		if pot.equity[e] > greatest {
+			greatest = pot.equity[e]
+		}
+	}
+
+	return greatest
+}
+
 // The pot type should do the calculations of deciding how much each
 // player gets.  While it _could_ pay the players, that is best done
 // by something else.
-func (p *Pot) getPayments(scores map[*Player]int) map[*Player]int {
-	//var payments map[*Player]int
+//
+// - If a single player with the strongest hand has max equity, then she
+// gets the whole pot.
+// - If there are N such players, they split the pot.
+// - If the strongest hand does not have max equity, we need extra
+// payments.
+func (pot *Pot) getPayments(playerScores map[*Player]int) map[*Player]int {
 	payments := make(map[*Player]int)
 
-	fmt.Println("Time to payout:")
-	fmt.Println(p)
+	// First reverse the input map.
+	scoreToPlayers := make(map[int][]*Player)
+	for p := range playerScores {
+		//if score, ok := playerScores[p]; ok {
+		score := playerScores[p]
+		if players, ok := scoreToPlayers[score]; ok {
+			scoreToPlayers[score] = append(players, p)
+		} else {
+			scoreToPlayers[score] = []*Player{p}
+		}
 
-	// If a single player with the strongest hand has max equity,
-	// then she gets the whole pot.
-	// If there are N such players, they split the pot.
-	// If the strongest hand does not have max equity, we need multiple
-	// pots.
-	for p := range scores {
-		pp := *p
-		payments[p] = 5
-		fmt.Println(pp.getName(), "won", 5)
+		// Initialize the payments map here.
+		payments[p] = 0
 	}
+
+	// Then work our way from the strongest hand down until we find an
+	// active player that has max equity.
+	var descendingHandStrength []int
+	for k := range scoreToPlayers {
+		descendingHandStrength = append(descendingHandStrength, k)
+	}
+	sort.Sort(sort.Reverse(sort.IntSlice(descendingHandStrength)))
+
+	highestEquity := pot.getGreatestEquity()
+	fmt.Println("The highest equity amount is", highestEquity)
+	for _, handStrength := range descendingHandStrength {
+
+		fmt.Println("handstrength:", handStrength)
+		var playerAtThisEquityLevel *Player
+		for _, p := range scoreToPlayers[handStrength] {
+			pp := *p
+			fmt.Println(" -", pp.getName())
+			playerAtThisEquityLevel = p
+		}
+
+		// Payout to those players.
+		// Do this by finding the sum, S, of all equity not to exceed ....
+		// This gets tricky when two players of different equities both
+		// have the strongest hands.
+
+		if pot.equity[playerAtThisEquityLevel] == highestEquity {
+			fmt.Println("Found a player with a strong hand that has max equity - breaking loop.")
+			break
+		}
+	}
+
+
+	//for p := range playerScores {
+	//	pp := *p
+	//	payments[p] = 5
+	//	fmt.Println(pp.getName(), "won", 5)
+	//}
 	return payments
 }
 
@@ -1568,11 +1691,23 @@ func (t *Table) checkForOnePlayer() bool {
 func (t *Table) moveBetsToPot() {
 	fmt.Println("Moving bets to pot.")
 
+	// This is the original approach.
+	//for _, p := range t.players {
+	//	player := *p
+	//	t.pot.addEquity(player.getBet(), p)
+	//	player.setBet(0)
+	//}
+
+	// We have to send all the bets in one bunch so the Pot can make
+	// sidepots if necessary.
+	t.pot.recordRoundBets(t.players)
+
+	// Then clear out each player's bets.
 	for _, p := range t.players {
 		player := *p
-		t.pot.addEquity(player.getBet(), p)
 		player.setBet(0)
 	}
+
 }
 
 func (t *Table) dealFlop() {
@@ -1601,14 +1736,12 @@ func (t *Table) payWinners() {
 	// Find all the players still in it and find their hand strength.
 	fmt.Println("Finding the still active players.")
 	var activePlayers []*Player
-	//playerScoresX := make(map[*Player]CardSet)
 	playerScores := make(map[*Player]int)
 	for _, p := range t.players {
 		player := *p
 		if player.checkHasFolded() {
 			continue
 		}
-
 		activePlayers = append(activePlayers, p)
 
 		// Evaluate the players' hand strengths.
@@ -1617,7 +1750,6 @@ func (t *Table) payWinners() {
 		combinedCardSet := hc.combine(*t.community.cards) // 7 cards.
 		combinedCardSet.findBestHand()
 		fmt.Printf("%s's best hand is: %s\n", player.getName(), combinedCardSet.bestEval)
-		//playerScoresX[p] = combinedCardSet
 		playerScores[p] = combinedCardSet.bestEval.flattenedScore
 	}
 
@@ -1731,8 +1863,9 @@ func runTournament() {
 	var table Table
 	table.initialize()
 
-	//temp := NewAllInAlwaysPlayer("Adam")
-	//table.addPlayer(&temp)
+	temp := NewAllInAlwaysPlayer("Adam")
+	temp.stack = 100  // To test Pot, we need an all-in short stack player.
+	table.addPlayer(&temp)
 	temp2 := NewGenericPlayer("Bert")
 	table.addPlayer(&temp2)
 	tempCSP := NewCallingStationPlayer("Cali")
