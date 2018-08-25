@@ -690,12 +690,39 @@ func (pot *Pot) getValue() int {
 
 func (pot *Pot) recordRoundBets(players []*Player) {
 	// First find all-in players with bets.
+	var allInBetValues []int
+	for _, p := range players {
+		pp := *p
+		if pp.checkIsAllIn() && pp.getBet() > 0 {
+			allInBetValues = append(allInBetValues, pp.getBet())
+		}
+	}
 
 	// Loop through them in ascending order by Player.bet.
+	sort.Sort(sort.IntSlice(allInBetValues))
+	for _, bet := range allInBetValues {
 		// Loop through all the players with bets.
+		for _, p := range players {
+			pp := *p
+			if pp.getBet() == 0 {
+				continue
+			}
+
 			// Deposit their bets (up to the current all-in player's
 			// bet) into the current subPot.
+			if pp.getBet() > bet {
+				pot.subPots[pot.subPotIndex].deposit(p, bet)
+			} else {
+				pot.subPots[pot.subPotIndex].deposit(p, pp.getBet())
+			}
+		}
+
 		// Create a new subPot and move the index.
+		//newSubPot := SubPot{contributingPlayers: nil, amount: 0}
+		fmt.Printf(	"Pot #%d is closed at $%d\n", pot.subPotIndex, bet)
+		pot.subPots = append(pot.subPots, &SubPot{contributingPlayers: nil, amount: 0})
+		pot.subPotIndex++
+	}
 
 	// Catch the rest of the bets by looping over all players with bets.
 	for _, p := range players {
@@ -728,7 +755,8 @@ func (pot *Pot) getWinnings(playerScores map[*Player]int) map[*Player]int {
 				subPotWinners = append(subPotWinners, cp)
 			}
 		}
-		fmt.Println("3 We have winners:", len(subPotWinners))
+		fmt.Printf("We have %d winners of a subPot worth $%d (each $%d):\n", len(subPotWinners), sp.amount,
+			sp.amount/len(subPotWinners))
 		fmt.Printf("SubPot #%d was won by ", i)
 		for _, spw := range subPotWinners {
 			spwp := *spw
@@ -1490,12 +1518,19 @@ func (t *Table) getStatus() string {
 	status := "------\n"
 	status += fmt.Sprintf("%s -- %d players\n", t.bettingRound, len(t.players))
 
-	for _, player := range t.players {
-		status += fmt.Sprintf("%s\n", *player)
+	betTotal := 0
+	stackTotal := 0
+	for _, p := range t.players {
+		pp := *p
+		status += fmt.Sprintf("%s\n", *p)
+		betTotal += pp.getBet()
+		stackTotal += pp.getStack()
 	}
 
 	status += fmt.Sprintf("Pot: %d\n", t.pot.getValue())
 	status += fmt.Sprintf("Community: %s\n", t.community)
+	status += fmt.Sprintf("Bet totals: %d\n", betTotal)
+	status += fmt.Sprintf("Stack totals: %d\n", stackTotal)
 	status += "------\n"
 	return status
 }
@@ -1902,6 +1937,7 @@ func (t *Table) payWinners() {
 	for p := range payments {
 		pp := *p
 		fmt.Println(pp.getName(), "gets", payments[p])
+		pp.addToStack(payments[p])
 	}
 
 	// The below is crap v1.
@@ -2004,9 +2040,12 @@ func runTournament() {
 	var table Table
 	table.initialize()
 
-	temp := NewAllInAlwaysPlayer("Adam")
-	temp.stack = 100  // To test Pot, we need an all-in short stack player.
-	table.addPlayer(&temp)
+	//temp := NewAllInAlwaysPlayer("Adam")
+	//temp.stack = 100  // To test Pot, we need an all-in short stack player.
+	//table.addPlayer(&temp)
+	//temp1 := NewAllInAlwaysPlayer("Alma")
+	//temp1.stack = 125  // To test Pot, we need an all-in short stack player.
+	//table.addPlayer(&temp1)
 	temp2 := NewGenericPlayer("Bert")
 	table.addPlayer(&temp2)
 	tempCSP := NewCallingStationPlayer("Cali")
@@ -2029,11 +2068,11 @@ func runTournament() {
 	table.addPlayer(&temp11)
 	temp12 := NewStreetTestPlayer("Rivv", "RIVER")
 	table.addPlayer(&temp12)
-	temp13 := NewMinRaisingPlayer("Mark")
+	temp13 := NewMinRaisingPlayer("Ming")
 	table.addPlayer(&temp13)
 
-	table.printLinkList(false, nil)
-	table.printLinkList(true, nil)
+	//table.printLinkList(false, nil)
+	//table.printLinkList(true, nil)
 	fmt.Print("\n\n")
 
 	// Set an initial small blind value.
