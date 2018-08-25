@@ -6,9 +6,9 @@ import (
 	"strconv"
 
 	"gopkg.in/inconshreveable/log15.v2"
-	"time"
 	"os"
 	"sort"
+	"time"
 )
 
 /*
@@ -20,7 +20,7 @@ In addition to those definitions:
   - round: a betting stage; there are four per game: preflop/flop/turn/river
   - game: what happens between the shuffling of the deck
   - tournament: from the first game until there's only one player left
- */
+*/
 
 type Card struct {
 	suit         string
@@ -80,9 +80,9 @@ func (c Card) isPaired(c2 Card) bool {
 }
 
 type CardSet struct {
-	cards []*Card
-	bestHand *CardSet
-	bestEval *Evaluation
+	cards         []*Card
+	bestHand      *CardSet
+	bestEval      *Evaluation
 	possibleHands []*CardSet
 }
 
@@ -142,10 +142,10 @@ func (cs *CardSet) combine(cs2 CardSet) CardSet {
 func (cs *CardSet) setPossibleHands() {
 	cards := cs.cards
 	for a := 0; a < len(cards)-4; a++ {
-		for b := a+1; b < len(cards)-3; b++ {
-			for c := b+1; c < len(cards)-2; c++ {
-				for d := c+1; d < len(cards)-1; d++ {
-					for e := d+1; e < len(cards); e++ {
+		for b := a + 1; b < len(cards)-3; b++ {
+			for c := b + 1; c < len(cards)-2; c++ {
+				for d := c + 1; d < len(cards)-1; d++ {
+					for e := d + 1; e < len(cards); e++ {
 						possibleHand := NewCardSet(*cards[a], *cards[b], *cards[c], *cards[d], *cards[e])
 						cs.possibleHands = append(cs.possibleHands, &possibleHand)
 					}
@@ -188,7 +188,6 @@ func (cs *CardSet) findBestHand() {
 		//}
 	}
 
-
 	//for i, ph := range cs.possibleHands {
 	//	fmt.Println(i, "evalling:", ph)
 	//	eval := NewEvaluation(*ph)
@@ -225,7 +224,6 @@ func (cs CardSet) getReverseOrderedNumericRanks() []int {
 	}
 	sort.Sort(sort.Reverse(sort.IntSlice(orderedRanks)))
 
-
 	return orderedRanks
 }
 
@@ -257,16 +255,16 @@ other types of hands, these will remain at zero.
 It is possible for different hands to have the same evaluation.
 */
 type Evaluation struct {
-	cardSet   *CardSet
-	humanEval string
-	allRanks  [6]*int
-	primaryRank int
-	secondaryRank int
-	tertiaryRank int
+	cardSet        *CardSet
+	humanEval      string
+	allRanks       [6]*int
+	primaryRank    int
+	secondaryRank  int
+	tertiaryRank   int
 	quaternaryRank int
-	quinaryRank int
-	senaryRank int
-	flattenedScore int  // A simple way to score the hand.  Higher is better.
+	quinaryRank    int
+	senaryRank     int
+	flattenedScore int // A simple way to score the hand.  Higher is better.
 }
 
 func NewEvaluation(cardSet CardSet) *Evaluation {
@@ -317,7 +315,7 @@ func (e Evaluation) isStraight() bool {
 		if previous == 0 {
 			previous = rank
 		} else {
-			if previous - rank != 1 {
+			if previous-rank != 1 {
 				return false
 			}
 			previous = rank
@@ -366,7 +364,7 @@ func (e *Evaluation) flattenScore() {
 	for _, subScore := range e.allRanks {
 		e.flattenedScore *= 100
 		//fmt.Println("at subscore of", *subScore, "e.flattenedScore is now", e.flattenedScore)
-		e.flattenedScore += *subScore  // this line panics
+		e.flattenedScore += *subScore // this line panics
 	}
 
 	//fmt.Println("Flattened", e.allRanks, "to", e.flattenedScore)
@@ -460,7 +458,7 @@ func (e *Evaluation) evaluate() {
 		return
 	}
 
-	if firstPair * secondPair != 0 {
+	if firstPair*secondPair != 0 {
 		e.humanEval = "two pairs"
 		e.primaryRank = 3
 		e.secondaryRank = firstPair
@@ -484,7 +482,7 @@ func (e *Evaluation) evaluate() {
 	e.primaryRank = 1
 	e.secondaryRank = singles[0]
 	e.tertiaryRank = singles[1]
-	e.quaternaryRank= singles[2]
+	e.quaternaryRank = singles[2]
 	e.quinaryRank = singles[3]
 	e.senaryRank = singles[4]
 }
@@ -635,7 +633,6 @@ func (sp SubPot) String() string {
 	return toString
 }
 
-
 func (sp SubPot) contains(player *Player) bool {
 	// This could have been a map but then I'd have to convert the slice
 	// in NewPot.
@@ -649,7 +646,7 @@ func (sp SubPot) contains(player *Player) bool {
 
 func (sp *SubPot) deposit(player *Player, amount int) {
 	pp := *player
-	if ! sp.contains(player) {
+	if !sp.contains(player) {
 		sp.contributingPlayers = append(sp.contributingPlayers, player)
 	}
 	sp.amount += amount
@@ -657,7 +654,7 @@ func (sp *SubPot) deposit(player *Player, amount int) {
 }
 
 type Pot struct {
-	subPots []*SubPot  // The first SubPot is the main pot.
+	subPots     []*SubPot // The first SubPot is the main pot.
 	subPotIndex int
 }
 
@@ -718,8 +715,8 @@ func (pot *Pot) recordRoundBets(players []*Player) {
 		}
 
 		// Create a new subPot and move the index.
-		//newSubPot := SubPot{contributingPlayers: nil, amount: 0}
-		fmt.Printf(	"Pot #%d is closed at $%d\n", pot.subPotIndex, bet)
+		//fmt.Printf("Pot #%d is closed at $%d\n", pot.subPotIndex, pot.subPots[pot.subPotIndex].amount)
+		fmt.Printf("Pot #%d is closed at $%d\n", pot.subPotIndex, bet)
 		pot.subPots = append(pot.subPots, &SubPot{contributingPlayers: nil, amount: 0})
 		pot.subPotIndex++
 	}
@@ -741,6 +738,12 @@ func (pot *Pot) getWinnings(playerScores map[*Player]int) map[*Player]int {
 
 	// Loop through all the subPots.
 	for i, sp := range pot.subPots {
+		// It is possible to have an empty subPot.  eg, some goes all
+		// in, someone calls and no one raises until the end of the
+		// game.
+		if sp.amount == 0 {
+			continue
+		}
 
 		// Find the contributingPlayer(s) with the highest score.
 		highestScore := 0
@@ -764,271 +767,17 @@ func (pot *Pot) getWinnings(playerScores map[*Player]int) map[*Player]int {
 
 			// Tally their winnings.
 			if _, ok := winnings[spw]; ok {
-				winnings[spw] += sp.amount/len(subPotWinners)
+				winnings[spw] += sp.amount / len(subPotWinners)
 			} else {
-				winnings[spw] = sp.amount/len(subPotWinners)
+				winnings[spw] = sp.amount / len(subPotWinners)
 			}
 		}
 		fmt.Println()
-
-
 
 	}
 
 	return winnings
 }
-
-
-/*
-In live poker, there can be multiple pots when someone goes in but
-there's still action on the table.
-
-Here, we will have one pot, the main pot.  But we'll keep track of
-each players equity.  Once the game is complete, we'll segment the
-pot.  Using the equity, we know how much of the pot is split across
-all players.  This is the first segment.  And how much of the pot is
-split across all-1 players.  This is the second segment.  This will
-continue until all equity is accounted for.
-
-For each segment, we'll find take the involved players and find who
-has the best hand and that player will get that segment of the pot.
-Folded players will have dead hands so their equity remains in the
-pot but their hand cannot win.
-
-If all players have equal equity, then there will be one segment
-and the player with the best hand gets the whole pot.
-
-For example, if one player goes all in and everyone else calls
-without going all in themselves, and there is no further betting,
-then each player has equal equity and we still have one segment.
-
-For another example, if PlayerA goes all on the flop and everyone
-folds except PlayerB and PlayerC.  Those two players call.  Then
-on the turn, they check-check.  Then on the river, they raise-call,
-then we have two segments.  The first segment are for exactly the
-three remaining players.  The second segment is just for PlayerB
-and PlayerC.
-
-Note that bets do not enter a pot until all betting is complete for
-the round.
-
-TODO: maybe this all needs to be redone.
-We only need segments when a player goes all-in.  The original approach
-wsa based on map[*Player]int.  The difficult scenario is when the all-in
-player and a non-all-in player tie for best hand.
-*/
-type OldPot struct {
-	value  int
-	involvedPlayers []*Player
-	equity map[*Player]int  // Try not to use this in new Pot.
-	sidePots []*OldPot
-}
-
-// Couldn't this be replaced with new(Pot)?  At least there's some
-// consistency.
-func NewOldPot() OldPot {
-	var pot OldPot
-
-	pot.value = 0
-	pot.equity = make(map[*Player]int)
-
-	return pot
-}
-
-func (pot OldPot) String() string {
-	toString := fmt.Sprintf("POT is $%d\n", pot.value)
-
-	for p, value := range pot.equity {
-		player := *p
-		toString += fmt.Sprintf("%s has equity: $%d\n", player.getName(), value)
-	}
-
-	return toString
-}
-
-func (pot *OldPot) depositBets(players []*Player) {
-	for _, p := range players {
-		pp := *p
-		pot.value += pp.getBet()
-	}
-}
-
-func (pot *OldPot) recordRoundBets(players []*Player) {
-	// Put all the bets into the main pot if either of these are true:
-	// - noone is all in
-	// - the non-folded player bets are equal
-
-	nooneIsAllIn := true
-	for _, p := range players {
-		pp := *p
-		if pp.checkIsAllIn() {
-			nooneIsAllIn = false
-			break
-		}
-	}
-	if nooneIsAllIn {
-		pot.depositBets(players)
-		return
-	}
-
-	equalBets := true
-	aBet := 0
-	for _, p := range players {
-		pp := *p
-		if pp.checkHasFolded() {
-			continue
-		}
-
-		if aBet == 0 {
-			aBet = pp.getBet()
-			continue
-		}
-
-		if pp.getBet() == aBet {
-			continue
-		}
-
-		equalBets = false
-		break
-	}
-	// This handles the case of a player going all-in, and some people
-	// calls but no one raises.
-	if equalBets {
-		pot.depositBets(players)
-		return
-	}
-
-	// At this point, we need side pots.  Note that multiple people can
-	// go all in during the same betting round.  We will need a sidepot
-	// for each unique amount that was a player's final bet.  It is
-	// possible for multiple players to go all-in for the same amount.
-	// This would lead to just one side-pot.  A real world example is
-	// the second round of a tournament.  If two people go all-in with
-	// their initial stack, this would not create two sidepots.
-
-	// Make a reverse map.
-
-
-}
-
-func (pot *OldPot) addEquity(playerBet int, player *Player) {
-	pot.value += playerBet
-	pot.equity[player] += playerBet
-}
-
-// This is part of the old calculations.
-func (pot *OldPot) getSegments() map[int][]*Player {
-
-	// First invert the map.
-	invertedMap := make(map[int][]*Player)
-	for p, equity := range pot.equity {
-		player := *p
-		invertedMap[equity] = append(invertedMap[equity], &player)
-	}
-
-	// Then sort the values of equity.  Note that this also removes
-	// duplicate values.
-	var sortedEquity []int
-	for eq := range invertedMap {
-		sortedEquity = append(sortedEquity, eq)
-	}
-
-	// Loop through the equities and create the reverse map.
-	segments := make(map[int][]*Player)
-	for _, equity := range sortedEquity {
-		fmt.Printf("$%d: \n", equity)
-		for _, p := range invertedMap[equity] {
-			player := *p
-			fmt.Printf("    %s\n", player.getName())
-			segments[equity] = append(segments[equity], &player)
-		}
-		fmt.Println()
-	}
-
-	fmt.Println("Returning from getSegments().")
-	return segments
-}
-
-func (pot OldPot) getGreatestEquity() int {
-	greatest := 0
-	for e := range pot.equity {
-		if pot.equity[e] > greatest {
-			greatest = pot.equity[e]
-		}
-	}
-
-	return greatest
-}
-
-// The pot type should do the calculations of deciding how much each
-// player gets.  While it _could_ pay the players, that is best done
-// by something else.
-//
-// - If a single player with the strongest hand has max equity, then she
-// gets the whole pot.
-// - If there are N such players, they split the pot.
-// - If the strongest hand does not have max equity, we need extra
-// payments.
-func (pot *OldPot) getPayments(playerScores map[*Player]int) map[*Player]int {
-	payments := make(map[*Player]int)
-
-	// First reverse the input map.
-	scoreToPlayers := make(map[int][]*Player)
-	for p := range playerScores {
-		//if score, ok := playerScores[p]; ok {
-		score := playerScores[p]
-		if players, ok := scoreToPlayers[score]; ok {
-			scoreToPlayers[score] = append(players, p)
-		} else {
-			scoreToPlayers[score] = []*Player{p}
-		}
-
-		// Initialize the payments map here.
-		payments[p] = 0
-	}
-
-	// Then work our way from the strongest hand down until we find an
-	// active player that has max equity.
-	var descendingHandStrength []int
-	for k := range scoreToPlayers {
-		descendingHandStrength = append(descendingHandStrength, k)
-	}
-	sort.Sort(sort.Reverse(sort.IntSlice(descendingHandStrength)))
-
-	highestEquity := pot.getGreatestEquity()
-	fmt.Println("The highest equity amount is", highestEquity)
-	for _, handStrength := range descendingHandStrength {
-
-		fmt.Println("handstrength:", handStrength)
-		var playerAtThisEquityLevel *Player
-		for _, p := range scoreToPlayers[handStrength] {
-			pp := *p
-			fmt.Println(" -", pp.getName())
-			playerAtThisEquityLevel = p
-		}
-
-		// Payout to those players.
-		// Do this by finding the sum, S, of all equity not to exceed ....
-		// This gets tricky when two players of different equities both
-		// have the strongest hands.
-
-		if pot.equity[playerAtThisEquityLevel] == highestEquity {
-			fmt.Println("Found a player with a strong hand that has max equity - breaking loop.")
-			break
-		}
-	}
-
-
-	//for p := range playerScores {
-	//	pp := *p
-	//	payments[p] = 5
-	//	fmt.Println(pp.getName(), "won", 5)
-	//}
-	return payments
-}
-
-
-
 
 // This is most-likely an anti-pattern.
 type Player interface {
@@ -1366,6 +1115,7 @@ func (stp *StreetTestPlayer) chooseAction(t *Table) {
 type MinRaisingPlayer struct {
 	GenericPlayer
 }
+
 // This Player makes sure that no street goes unbet.
 func NewMinRaisingPlayer(name string) MinRaisingPlayer {
 	ecs := NewCardSet()
@@ -1455,7 +1205,7 @@ func (ap *AllInAlwaysPlayer) chooseAction(t *Table) {
 }
 
 // This Player is a calling station unless the current bet is >=5x his
-// current bet.  In that case, he will fold.
+// current non-zero bet.  In that case, he will fold.
 type CallToFivePlayer struct {
 	GenericPlayer
 }
@@ -1477,6 +1227,12 @@ func (ct5p *CallToFivePlayer) chooseAction(t *Table) {
 	fmt.Println("This is CT5 overriding chooseAction")
 	currentTableBet := t.getMaxBet()
 
+	// First check or call if I haven't bet yet.
+	if ct5p.bet == 0 {
+		ct5p.checkOrCall(t)
+	}
+
+	// Then call up to 5x my bet.
 	if currentTableBet >= 5*ct5p.bet {
 		fmt.Printf("My bet ($%d) is less than a fifth of the table's bet ($%d) so folding.\n",
 			ct5p.bet, currentTableBet)
@@ -1492,7 +1248,6 @@ func (ct5p *CallToFivePlayer) chooseAction(t *Table) {
 }
 
 // These are future players.
-
 
 /**
 This breaks my brain.
@@ -1581,62 +1336,28 @@ func (t *Table) addPlayerPointerVersion(player *Player) {
 
 	t.players = append(t.players, player)
 
-	fmt.Printf("CURRENT PLAYER: %s > %s > %s\n",
-		lastPlayer.getName(), playerDerefd.getName(), initialPlayer.getName())
+	//fmt.Printf("CURRENT PLAYER: %s > %s > %s\n",
+	//	lastPlayer.getName(), playerDerefd.getName(), initialPlayer.getName())
 	return
 }
 
 func (t *Table) addPlayer(player Player) {
 	if len(t.players) == 0 {
-		//fmt.Println(t)
-		//fmt.Println("The table is empty so adding", player.getName())
 		t.players = append(t.players, &player)
-		//fmt.Println("The table now has length:", len(t.players))
-		//fmt.Println(t)  // &{[0xc042054320] 0 {<nil>} <nil> 0 <nil> 0 <nil>  <nil> {0 map[]}}
-
-		//fmt.Printf("1b -> ")
-		//t.printPlayerList()
-
 		return
 	}
 
-	//t.printPlayerList()
 	initialPlayer := *t.players[0]
-	//fmt.Println("initial player is:", initialPlayer.getName())
 	lastPlayerPtr := t.players[len(t.players)-1]
 	lastPlayer := *lastPlayerPtr
-	//fmt.Println("last player is:", lastPlayer.getName())
-
-	//var peter Player
-	//zubin := NewGenericPlayer("zubin")
-	//converterSlice := []*Player(&zubin)
-	//converterSlice = append(converterSlice, &zubin)
-
-	//fmt.Println("table.players is of type:", reflect.TypeOf(t.players))      // []*main.Player
-	//fmt.Println("table.gameCtr is of type:", reflect.TypeOf(t.gameCtr))      // int
-	//fmt.Println("table.Pot is of type:    ", reflect.TypeOf(t.pot))          // main.Pot
-	//fmt.Println("lastPlayerPtr is of type:", reflect.TypeOf(lastPlayerPtr))  // *main.Player
-	//fmt.Println("lastPlayer is of type:   ", reflect.TypeOf(lastPlayer))     // *main.GenericPlayer
-	//fmt.Println("&lastPlayer is of type:  ", reflect.TypeOf(&lastPlayer))    // *main.Player
-	//fmt.Println("zubin is of type:        ", reflect.TypeOf(zubin))          // main.GenericPlayer
-	//fmt.Println("&zubin is of type:       ", reflect.TypeOf(&zubin))         // *main.GenericPlayer
-	//fmt.Println("peter is of type:        ", reflect.TypeOf(peter))          // <nil>
-	//fmt.Println("&peter is of type:       ", reflect.TypeOf(&peter))         // *main.Player
-
 	lastPlayer.setNextPlayer(&player)
-	//player.setPreviousPlayer(&lastPlayer)
 	player.setPreviousPlayer(lastPlayerPtr)
 	player.setNextPlayer(t.players[0])
 	initialPlayer.setPreviousPlayer(&player)
-
 	t.players = append(t.players, &player)
 
-	// below error: Can't use *GenericPlayer as type *Player
-	//player.setPreviousPlayer(&peter)
-
-	//player.setName("fakeo")
-	fmt.Printf("CURRENT PLAYER: %s > %s > %s\n",
-		lastPlayer.getName(), player.getName(), initialPlayer.getName())
+	//fmt.Printf("CURRENT PLAYER: %s > %s > %s\n",
+	//	lastPlayer.getName(), player.getName(), initialPlayer.getName())
 	return
 }
 
@@ -1646,7 +1367,6 @@ func (t Table) printPlayerList() {
 		fmt.Println("There is only one player at the table:", lonePlayer.getName())
 		return
 	}
-	//fmt.Println("Here's the table: ", t)
 
 	fmt.Println("Players: ")
 	for _, p := range t.players {
@@ -1721,7 +1441,6 @@ func (t *Table) postBlinds() (table Table) {
 }
 
 func (t *Table) dealHoleCards() {
-
 	for _, p := range t.players {
 		player := *p
 		player.addHoleCard(*t.deck.getCard())
@@ -1748,7 +1467,6 @@ func (t *Table) getMaxBet() int {
 }
 
 func (t *Table) getPlayerAction(playerPtr *Player) {
-	//if player.checkHasFolded() {
 	player := *playerPtr
 	if player.checkHasFolded() {
 		fmt.Println(player.getName(), "has folded so no action.")
@@ -1771,7 +1489,6 @@ Return false unless all non folded players either have the same bet or
 are all-in.
 */
 func (t *Table) checkBetParity() bool {
-	//fmt.Printf("Checking bet parity... ")
 	maxBet := t.getMaxBet()
 	for _, p := range t.players {
 		player := *p
@@ -1780,13 +1497,10 @@ func (t *Table) checkBetParity() bool {
 		}
 
 		if player.getBet() != maxBet {
-			//fmt.Println(player.getName(), "needs to take action.  Player bet is $", player.getBet(),
-			//	"which < max bet of $", maxBet)
 			return false
 		}
 	}
 
-	//fmt.Println()
 	return true
 }
 
@@ -1866,24 +1580,8 @@ func (t *Table) checkForOnePlayer() bool {
 
 func (t *Table) moveBetsToPot() {
 	fmt.Println("Moving bets to pot.")
-
-	// This is the original approach.
-	//for _, p := range t.players {
-	//	player := *p
-	//	t.pot.addEquity(player.getBet(), p)
-	//	player.setBet(0)
-	//}
-
-	// We have to send all the bets in one bunch so the Pot can make
-	// sidepots if necessary.
 	t.pot.recordRoundBets(t.players)
-
-	// Then clear out each player's bets.
-	//for _, p := range t.players {
-	//	player := *p
-	//	player.setBet(0)
-	//}
-
+	fmt.Println("The pot is now:", t.pot)
 }
 
 func (t *Table) dealFlop() {
@@ -1939,31 +1637,47 @@ func (t *Table) payWinners() {
 		fmt.Println(pp.getName(), "gets", payments[p])
 		pp.addToStack(payments[p])
 	}
-
-	// The below is crap v1.
-	// To properly test this loop, we need different player types first.
-	// TODO: the below block should start with the lowest segments first
-	//       so we can roll up unclaimed payouts to the next highest
-	//       segment.
-	//for segmentAmount, segmentPlayers := range t.pot.getSegments() {
-	//	// The logic in Pot could be made better so we don't have to do
-	//	// this block.
-	//	if segmentAmount == 0 {
-	//		continue
-	//	}
-	//
-	//	fmt.Printf("$%d: ", segmentAmount)
-	//	for _, p := range segmentPlayers {
-	//		player := *p
-	//		fmt.Printf("%s, ", player.getName())
-	//	}
-	//	fmt.Println()
-	//	fmt.Println(segmentAmount, "->", segmentPlayers)
-	//	segmentValue := segmentAmount * len(segmentPlayers)
-	//	t.payWinnersForSegment(segmentValue, segmentPlayers)
-	//}
 }
 
+func (t *Table) removeBustedPlayers() {
+	var bustedPlayers []*Player  // We need this temp slice so not to affect the below range.
+	for _, p := range t.players {
+		pp := *p
+		if pp.getStack() > 0 {
+			continue
+		}
+		bustedPlayers = append(bustedPlayers, p)
+	}
+
+	for i, bp := range bustedPlayers {
+		bpp := *bp
+
+		// Remove the busted player.
+		fmt.Println(bpp.getName(), "has busted out so removing from the table.")
+		fmt.Printf("From: ")
+		t.printLinkList(false, nil)
+		fmt.Printf("      ")
+		t.printLinkList(true, nil)
+		previousPlayer := bpp.getPreviousPlayer()
+		ppp := *previousPlayer
+		nextPlayer := bpp.getNextPlayer()
+		npp := *nextPlayer
+
+		ppp.setNextPlayer(nextPlayer)
+		npp.setPreviousPlayer(previousPlayer)
+
+		//shortenedPlayerList := append(t.players[:i], t.players[i+1:]...)
+		//t.players = nil
+		//t.players = shortenedPlayerList
+		t.players = append(t.players[:i], t.players[i+1:]...)
+		fmt.Printf("To: ")
+		t.printLinkList(false, nil)
+		fmt.Printf("    ")
+		t.printLinkList(true, nil)
+	}
+}
+
+// Is this still needed?
 func (t *Table) payWinnersForSegment(segmentValue int, players []*Player) {
 	// It is possible that a segment has no valid players because they
 	// have all folded.  For example, if the small blind folds, he may
@@ -2035,44 +1749,86 @@ func (t *Table) payWinnersForSegment(segmentValue int, players []*Player) {
 	os.Exit(4)
 }
 
-
 func runTournament() {
 	var table Table
 	table.initialize()
 
-	//temp := NewAllInAlwaysPlayer("Adam")
-	//temp.stack = 100  // To test Pot, we need an all-in short stack player.
-	//table.addPlayer(&temp)
-	//temp1 := NewAllInAlwaysPlayer("Alma")
-	//temp1.stack = 125  // To test Pot, we need an all-in short stack player.
-	//table.addPlayer(&temp1)
+	temp := NewAllInAlwaysPlayer("Adam")
+	temp.stack = 100 // To test Pot, we need an all-in short stack player.
+	table.addPlayer(&temp)
+	temp1 := NewAllInAlwaysPlayer("Alma")
+	temp1.stack = 125 // To test Pot, we need an all-in short stack player.
+	table.addPlayer(&temp1)
 	temp2 := NewGenericPlayer("Bert")
 	table.addPlayer(&temp2)
 	tempCSP := NewCallingStationPlayer("Cali")
 	table.addPlayer(&tempCSP)
-	temp4 := NewGenericPlayer("Dale")
-	table.addPlayer(&temp4)
+	//temp4 := NewGenericPlayer("Dale")
+	//table.addPlayer(&temp4)
 	temp5 := NewGenericPlayer("Eyor")
+	//temp5.stack = 0
 	table.addPlayer(&temp5)
 	temp6 := NewFoldingPlayer("Fred")
+	//temp6.stack = 0
 	table.addPlayer(&temp6)
 	temp7 := NewCallToFivePlayer("Greg")
 	table.addPlayer(&temp7)
-	temp8 := NewGenericPlayer("Hill")
-	table.addPlayer(&temp8)
-	temp9 := NewGenericPlayer("Igor")
-	table.addPlayer(&temp9)
-	temp10 := NewStreetTestPlayer("Flow", "FLOP")
-	table.addPlayer(&temp10)
-	temp11 := NewStreetTestPlayer("Turk", "TURN")
-	table.addPlayer(&temp11)
-	temp12 := NewStreetTestPlayer("Rivv", "RIVER")
-	table.addPlayer(&temp12)
-	temp13 := NewMinRaisingPlayer("Ming")
-	table.addPlayer(&temp13)
+	//temp8 := NewGenericPlayer("Hill")
+	//table.addPlayer(&temp8)
+	//temp9 := NewGenericPlayer("Igor")
+	//table.addPlayer(&temp9)
+	//temp10 := NewStreetTestPlayer("Flow", "FLOP")
+	//table.addPlayer(&temp10)
+	//temp11 := NewStreetTestPlayer("Turk", "TURN")
+	//table.addPlayer(&temp11)
+	//temp12 := NewStreetTestPlayer("Rivv", "RIVER")
+	//table.addPlayer(&temp12)
+	//temp13 := NewMinRaisingPlayer("Ming")
+	//table.addPlayer(&temp13)
 
-	//table.printLinkList(false, nil)
-	//table.printLinkList(true, nil)
+	table.printLinkList(false, nil)
+	table.printLinkList(true, nil)
+	table.removeBustedPlayers()
+	table.printLinkList(false, nil)
+	table.printLinkList(true, nil)
+	//os.Exit(8)
+	//t := table
+	//var bustedPlayers []*Player  // We need this temp slice so not to affect the below range.
+	//for _, p := range table.players {
+	//	pp := *p
+	//	if pp.getStack() > 0 {
+	//		continue
+	//	}
+	//	bustedPlayers = append(bustedPlayers, p)
+	//}
+	//for i, bp := range bustedPlayers {
+	//	bpp := *bp
+	//
+	//	// Remove the busted player.
+	//	fmt.Println(bpp.getName(), "has busted out so removing from the table.")
+	//	fmt.Printf("From: ")
+	//	table.printLinkList(false, nil)
+	//	fmt.Printf("      ")
+	//	table.printLinkList(true, nil)
+	//	previousPlayer := bpp.getPreviousPlayer()
+	//	ppp := *previousPlayer
+	//	nextPlayer := bpp.getNextPlayer()
+	//	npp := *nextPlayer
+	//
+	//	ppp.setNextPlayer(nextPlayer)
+	//	npp.setPreviousPlayer(previousPlayer)
+	//
+	//	shortenedPlayerList := append(table.players[:i], table.players[i+1:]...)
+	//	table.players = nil
+	//	table.players = shortenedPlayerList
+	//	fmt.Printf("To: ")
+	//	table.printLinkList(false, nil)
+	//	fmt.Printf("    ")
+	//	table.printLinkList(true, nil)
+	//}
+	//
+	//os.Exit(7)
+
 	fmt.Print("\n\n")
 
 	// Set an initial small blind value.
@@ -2085,11 +1841,11 @@ func runTournament() {
 		table.assignInitialButtonAndBlinds()
 		table.bettingRound = "PREFLOP"
 
-		if i == 2 {
-			fmt.Println("Figure out how to pay winners then we'll continue.")
-			fmt.Println(table.getStatus())
-			os.Exit(3)
-		}
+		//if i == 2 {
+		//	fmt.Println("Figure out how to pay winners then we'll continue.")
+		//	fmt.Println(table.getStatus())
+		//	os.Exit(3)
+		//}
 
 		table.postBlinds()
 		fmt.Println(table.getStatus())
@@ -2117,13 +1873,13 @@ func runTournament() {
 		table.dealRiver()
 
 		// Mock the community cards for testing Evaluation()
-		mockedCardSet := NewCommunity()
-		mockedCardSet.add(NewCard("H", 11))
-		mockedCardSet.add(NewCard("H", 6))
-		mockedCardSet.add(NewCard("C", 11))
-		mockedCardSet.add(NewCard("S", 11))
-		mockedCardSet.add(NewCard("C", 6))
-		table.community = mockedCardSet
+		//mockedCardSet := NewCommunity()
+		//mockedCardSet.add(NewCard("H", 11))
+		//mockedCardSet.add(NewCard("H", 6))
+		//mockedCardSet.add(NewCard("C", 11))
+		//mockedCardSet.add(NewCard("S", 11))
+		//mockedCardSet.add(NewCard("C", 6))
+		//table.community = mockedCardSet
 
 		table.postPreFlopBet()
 		table.moveBetsToPot()
@@ -2131,6 +1887,10 @@ func runTournament() {
 
 		fmt.Println("Finding and paying the winners.")
 		table.payWinners()
+		table.removeBustedPlayers()
+
+		fmt.Println("At the end of the game, the table looks like this:")
+		fmt.Println(table.getStatus())
 	}
 
 }
@@ -2143,9 +1903,9 @@ Each winner of each game has the best _hand_ - multiple winners are possible.
 */
 
 // This is just to cast a GenericPlayer to Player.
-func castToPlayer(player Player) Player {
-	return player
-}
+//func castToPlayer(player Player) Player {
+//	return player
+//}
 
 func main() {
 	//card := NewCard("H", 12)
@@ -2177,19 +1937,6 @@ func main() {
 	//for i, c := range cs5.cards {
 	//	fmt.Println(i, c)
 	//}
-	//
-	//os.Exit(3)
-
-	//
-	////holeCards := new(HoleCards)
-	//holeCards := HoleCards{cardset: &ecs}
-	//fmt.Println("Holecards:", holeCards)
-	//holeCards.add(card)
-	//fmt.Println("Holecards:", holeCards)
-	//holeCards.add(card2)
-	//fmt.Println("Holecards:", holeCards)
-	//holeCards.add(card)
-	//fmt.Println("Holecards:", holeCards)
 	//
 	//os.Exit(3)
 
