@@ -685,19 +685,112 @@ func (pot *Pot) getValue() int {
 	return value
 }
 
+/*
+When Alma or Adam win the first game, the second is nuts.  The fix is to uniq
+the all-in bet sizes.
+
+Everyone had a chance to bet and everyone is all-in, has checkHasFolded or has called.
+Moving bets to pot.
+Pot #0 is closed at $725
+Pot #1 is closed at $775
+Pot #2 is closed at $825
+Pot #3 is closed at $875
+Pot #4 is closed at $875
+Pot #5 is closed at $875
+Pot #6 is closed at $875
+Pot #7 is closed at $875
+Pot #8 is closed at $875
+Pot #9 is closed at $1175
+Pot #10 is closed at $1600
+POT total is $10375
+pot #0, $8000: Alma, Bert, Cali, Dale, Eyor, Fred, Greg, Hill, Igor, Flow, Turk, Rivv, Ming,
+pot #1, $2275: Alma, Bert, Cali, Dale, Eyor, Hill, Igor, Flow, Turk, Rivv,
+pot #2, $100: Alma,
+pot #3, $0:
+pot #4, $0:
+pot #5, $0:
+pot #6, $0:
+pot #7, $0:
+pot #8, $0:
+pot #9, $0:
+pot #10, $0:
+pot #11, $0:
+------
+PREFLOP -- 13 players
+Alma: [C4 D9] $0/$0
+Bert: [C9 SQ] $0/$0
+Cali: [H8 S2] $0/$0
+Dale: [DJ HA] $0/$0
+Eyor: [H2 HJ] $0/$0
+Fred: [] $0/$1000
+Greg: [] $0/$850
+Hill: [D7 CT] $0/$0
+Igor: [S9 C2] $0/$0
+Flow: [SA D4] $0/$0
+Turk: [CJ D6] $0/$0
+Rivv: [DA DQ] $0/$0
+Ming: [CQ CK] $0/$0
+Pot: 10375
+Community:
+Bet totals: 0
+Stack totals: 1850
+====================================
+PREFLOP -- 13 players
+Alma: [] $25/$1575
+Bert: [] $50/$825
+Cali: [] $0/$1175
+Dale: [] $0/$875
+Eyor: [] $0/$875
+Fred: [] $0/$1000
+Greg: [] $0/$875
+Hill: [] $0/$875
+Igor: [] $0/$875
+Flow: [] $0/$875
+Turk: [] $0/$825
+Rivv: [] $0/$775
+Ming: [] $0/$725
+Pot: 0
+Community:
+Bet totals: 75
+Stack totals: 12150
+<snip>
+Everyone had a chance to bet and everyone is all-in, has checkHasFolded or has called.
+Moving bets to pot.
+Pot #0 is closed at $725
+Pot #1 is closed at $775
+Pot #2 is closed at $825
+Pot #3 is closed at $875
+Pot #4 is closed at $1175
+Pot #5 is closed at $1600
+POT total is $10400
+pot #0, $8025: Alma, Bert, Cali, Dale, Eyor, Fred, Greg, Hill, Igor, Flow, Turk, Rivv, Ming,
+pot #1, $2275: Alma, Bert, Cali, Dale, Eyor, Hill, Igor, Flow, Turk, Rivv,
+pot #2, $100: Alma,
+pot #3, $0:
+pot #4, $0:
+pot #5, $0:
+pot #6, $0:
+
+ */
 func (pot *Pot) recordRoundBets(players []*Player) {
 	// First find all-in players with bets.
-	var allInBetValues []int
+	allInBetAmountMap := make(map[int]int)  // To record unique amounts.
 	for _, p := range players {
 		pp := *p
 		if pp.checkIsAllIn() && pp.getBet() > 0 {
-			allInBetValues = append(allInBetValues, pp.getBet())
+			allInBetAmountMap[pp.getBet()]++
 		}
 	}
 
 	// Loop through them in ascending order by Player.bet.
-	sort.Sort(sort.IntSlice(allInBetValues))
-	for _, bet := range allInBetValues {
+	var allInBetAmounts []int
+	for amount := range allInBetAmountMap {
+		allInBetAmounts = append(allInBetAmounts, amount)
+	}
+	sort.Sort(sort.IntSlice(allInBetAmounts))
+
+	previousAllInBetAmount := 0
+	for _, bet := range allInBetAmounts {
 		// Loop through all the players with bets.
 		for _, p := range players {
 			pp := *p
@@ -707,18 +800,24 @@ func (pot *Pot) recordRoundBets(players []*Player) {
 
 			// Deposit their bets (up to the current all-in player's
 			// bet) into the current subPot.
-			if pp.getBet() > bet {
-				pot.subPots[pot.subPotIndex].deposit(p, bet)
+			margin := bet - previousAllInBetAmount
+			if pp.getBet() > margin {
+				pot.subPots[pot.subPotIndex].deposit(p, margin)
 			} else {
 				pot.subPots[pot.subPotIndex].deposit(p, pp.getBet())
 			}
+			//if pp.getBet() > bet {
+			//	pot.subPots[pot.subPotIndex].deposit(p, bet)
+			//} else {
+			//	pot.subPots[pot.subPotIndex].deposit(p, pp.getBet())
+			//}
 		}
 
 		// Create a new subPot and move the index.
-		//fmt.Printf("Pot #%d is closed at $%d\n", pot.subPotIndex, pot.subPots[pot.subPotIndex].amount)
 		fmt.Printf("Pot #%d is closed at $%d\n", pot.subPotIndex, bet)
 		pot.subPots = append(pot.subPots, &SubPot{contributingPlayers: nil, amount: 0})
 		pot.subPotIndex++
+		previousAllInBetAmount = bet
 	}
 
 	// Catch the rest of the bets by looping over all players with bets.
@@ -1583,7 +1682,7 @@ func (t *Table) checkForOnePlayer() bool {
 func (t *Table) moveBetsToPot() {
 	fmt.Println("Moving bets to pot.")
 	t.pot.recordRoundBets(t.players)
-	fmt.Println("The pot is now:", t.pot)
+	fmt.Println(t.pot)
 }
 
 func (t *Table) dealFlop() {
@@ -1813,7 +1912,7 @@ func runTournament() {
 	// Set an initial small blind value.
 	table.defineBlinds(25)
 
-	for i := 1; i <= 2; i++ {
+	for i := 1; i <= 4; i++ {
 		fmt.Println("============================")
 		table.preset()
 		fmt.Printf("This is game #%d.\n", table.gameCtr)
@@ -1834,21 +1933,21 @@ func runTournament() {
 		fmt.Println(table.getStatus())
 
 		table.bettingRound = "FLOP"
-		fmt.Println("Dealing the flop.")
+		fmt.Println("---------------------- Dealing the flop.")
 		table.dealFlop()
 		table.postPreFlopBet()
 		table.moveBetsToPot()
 		fmt.Println(table.getStatus())
 
 		table.bettingRound = "TURN"
-		fmt.Println("Dealing the turn.")
+		fmt.Println("---------------------- Dealing the turn.")
 		table.dealTurn()
 		table.postPreFlopBet()
 		table.moveBetsToPot()
 		fmt.Println(table.getStatus())
 
 		table.bettingRound = "RIVER"
-		fmt.Println("Dealing the river.")
+		fmt.Println("---------------------- Dealing the river.")
 		table.dealRiver()
 
 		// Mock the community cards for testing Evaluation()
@@ -1970,7 +2069,7 @@ func main() {
 	//
 	//os.Exit(7)
 
-	for i := 1; i <= 2; i++ {
+	for i := 1; i <= 1; i++ {
 		fmt.Println(">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>")
 		fmt.Printf("Starting tournament #%d\n", i)
 		runTournament()
