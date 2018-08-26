@@ -1132,7 +1132,6 @@ func NewMinRaisingPlayer(name string) MinRaisingPlayer {
 
 func (mrp *MinRaisingPlayer) chooseAction(t *Table) {
 	currentTableBet := t.getMaxBet()
-	time.Sleep(5000)
 	if currentTableBet > mrp.bet {
 		fmt.Printf("My bet ($%d) is below the table's bet ($%d) so calling.\n", mrp.bet, currentTableBet)
 		mrp.call(t)
@@ -1317,29 +1316,29 @@ func (t *Table) preset() {
 	}
 }
 
-func (t *Table) addPlayerPointerVersion(player *Player) {
-	if len(t.players) == 0 {
-		t.players = append(t.players, player)
-		return
-	}
-
-	playerDerefd := *player
-
-	initialPlayer := *t.players[0]
-	lastPlayerPtr := t.players[len(t.players)-1]
-	lastPlayer := *lastPlayerPtr
-
-	lastPlayer.setNextPlayer(player)
-	playerDerefd.setPreviousPlayer(&lastPlayer)
-	playerDerefd.setNextPlayer(t.players[0])
-	initialPlayer.setPreviousPlayer(player)
-
-	t.players = append(t.players, player)
-
-	//fmt.Printf("CURRENT PLAYER: %s > %s > %s\n",
-	//	lastPlayer.getName(), playerDerefd.getName(), initialPlayer.getName())
-	return
-}
+//func (t *Table) addPlayerPointerVersion(player *Player) {
+//	if len(t.players) == 0 {
+//		t.players = append(t.players, player)
+//		return
+//	}
+//
+//	playerDerefd := *player
+//
+//	initialPlayer := *t.players[0]
+//	lastPlayerPtr := t.players[len(t.players)-1]
+//	lastPlayer := *lastPlayerPtr
+//
+//	lastPlayer.setNextPlayer(player)
+//	playerDerefd.setPreviousPlayer(&lastPlayer)
+//	playerDerefd.setNextPlayer(t.players[0])
+//	initialPlayer.setPreviousPlayer(player)
+//
+//	t.players = append(t.players, player)
+//
+//	//fmt.Printf("CURRENT PLAYER: %s > %s > %s\n",
+//	//	lastPlayer.getName(), playerDerefd.getName(), initialPlayer.getName())
+//	return
+//}
 
 func (t *Table) addPlayer(player Player) {
 	if len(t.players) == 0 {
@@ -1399,8 +1398,12 @@ func (t Table) printLinkList(reverse bool, p *Player) {
 		}
 	}
 
-	fmt.Printf("%s -> ", player.getName())
-	time.Sleep(1000)
+	if reverse == false {
+		fmt.Printf("%s -> ", player.getName())
+	} else {
+		fmt.Printf("%s <- ", player.getName())
+	}
+
 	if reverse == false {
 		t.printLinkList(reverse, player.getNextPlayer()) // error (fixed)
 	} else {
@@ -1536,7 +1539,6 @@ func (t *Table) genericBet(firstBetter *Player) {
 			fmt.Println("There is only one player left with action.")
 			break
 		}
-		time.Sleep(1000)
 
 		if t.checkBetParity() {
 			fmt.Println("Everyone had a chance to bet and everyone is all-in, has checkHasFolded or has called.")
@@ -1639,6 +1641,21 @@ func (t *Table) payWinners() {
 	}
 }
 
+func (t *Table) removePlayer(player *Player) {
+	for i, p := range t.players {
+		pp := *p
+		if p == player {
+			fmt.Println("Removing", pp.getName(), "from position", i, "on the table.")
+			t.players = append(t.players[:i], t.players[i+1:]...)
+			return
+		}
+	}
+
+	playerDerefd := *player
+	fmt.Println("Could not find", playerDerefd.getName(), "so exiting program.")
+	os.Exit(11)
+}
+
 func (t *Table) removeBustedPlayers() {
 	var bustedPlayers []*Player  // We need this temp slice so not to affect the below range.
 	for _, p := range t.players {
@@ -1649,7 +1666,7 @@ func (t *Table) removeBustedPlayers() {
 		bustedPlayers = append(bustedPlayers, p)
 	}
 
-	for i, bp := range bustedPlayers {
+	for _, bp := range bustedPlayers {
 		bpp := *bp
 
 		// Remove the busted player.
@@ -1666,10 +1683,7 @@ func (t *Table) removeBustedPlayers() {
 		ppp.setNextPlayer(nextPlayer)
 		npp.setPreviousPlayer(previousPlayer)
 
-		//shortenedPlayerList := append(t.players[:i], t.players[i+1:]...)
-		//t.players = nil
-		//t.players = shortenedPlayerList
-		t.players = append(t.players[:i], t.players[i+1:]...)
+		t.removePlayer(bp)
 		fmt.Printf("To: ")
 		t.printLinkList(false, nil)
 		fmt.Printf("    ")
@@ -1758,76 +1772,41 @@ func runTournament() {
 	table.addPlayer(&temp)
 	temp1 := NewAllInAlwaysPlayer("Alma")
 	temp1.stack = 125 // To test Pot, we need an all-in short stack player.
+	//temp1.stack = 0 // To test Pot, we need an all-in short stack player.
 	table.addPlayer(&temp1)
 	temp2 := NewGenericPlayer("Bert")
 	table.addPlayer(&temp2)
 	tempCSP := NewCallingStationPlayer("Cali")
 	table.addPlayer(&tempCSP)
-	//temp4 := NewGenericPlayer("Dale")
-	//table.addPlayer(&temp4)
+	temp4 := NewGenericPlayer("Dale")
+	table.addPlayer(&temp4)
 	temp5 := NewGenericPlayer("Eyor")
-	//temp5.stack = 0
 	table.addPlayer(&temp5)
 	temp6 := NewFoldingPlayer("Fred")
-	//temp6.stack = 0
 	table.addPlayer(&temp6)
 	temp7 := NewCallToFivePlayer("Greg")
 	table.addPlayer(&temp7)
-	//temp8 := NewGenericPlayer("Hill")
-	//table.addPlayer(&temp8)
-	//temp9 := NewGenericPlayer("Igor")
-	//table.addPlayer(&temp9)
-	//temp10 := NewStreetTestPlayer("Flow", "FLOP")
-	//table.addPlayer(&temp10)
-	//temp11 := NewStreetTestPlayer("Turk", "TURN")
-	//table.addPlayer(&temp11)
-	//temp12 := NewStreetTestPlayer("Rivv", "RIVER")
-	//table.addPlayer(&temp12)
-	//temp13 := NewMinRaisingPlayer("Ming")
-	//table.addPlayer(&temp13)
+	temp8 := NewGenericPlayer("Hill")
+	table.addPlayer(&temp8)
+	temp9 := NewGenericPlayer("Igor")
+	table.addPlayer(&temp9)
+	temp10 := NewStreetTestPlayer("Flow", "FLOP")
+	table.addPlayer(&temp10)
+	temp11 := NewStreetTestPlayer("Turk", "TURN")
+	table.addPlayer(&temp11)
+	temp12 := NewStreetTestPlayer("Rivv", "RIVER")
+	table.addPlayer(&temp12)
+	temp13 := NewMinRaisingPlayer("Ming")
+	table.addPlayer(&temp13)
 
-	table.printLinkList(false, nil)
-	table.printLinkList(true, nil)
+	//table.printLinkList(false, nil)
+	//table.printLinkList(true, nil)
 	table.removeBustedPlayers()
-	table.printLinkList(false, nil)
-	table.printLinkList(true, nil)
-	//os.Exit(8)
-	//t := table
-	//var bustedPlayers []*Player  // We need this temp slice so not to affect the below range.
-	//for _, p := range table.players {
-	//	pp := *p
-	//	if pp.getStack() > 0 {
-	//		continue
-	//	}
-	//	bustedPlayers = append(bustedPlayers, p)
-	//}
-	//for i, bp := range bustedPlayers {
-	//	bpp := *bp
-	//
-	//	// Remove the busted player.
-	//	fmt.Println(bpp.getName(), "has busted out so removing from the table.")
-	//	fmt.Printf("From: ")
-	//	table.printLinkList(false, nil)
-	//	fmt.Printf("      ")
-	//	table.printLinkList(true, nil)
-	//	previousPlayer := bpp.getPreviousPlayer()
-	//	ppp := *previousPlayer
-	//	nextPlayer := bpp.getNextPlayer()
-	//	npp := *nextPlayer
-	//
-	//	ppp.setNextPlayer(nextPlayer)
-	//	npp.setPreviousPlayer(previousPlayer)
-	//
-	//	shortenedPlayerList := append(table.players[:i], table.players[i+1:]...)
-	//	table.players = nil
-	//	table.players = shortenedPlayerList
-	//	fmt.Printf("To: ")
-	//	table.printLinkList(false, nil)
-	//	fmt.Printf("    ")
-	//	table.printLinkList(true, nil)
-	//}
-	//
+	//table.printLinkList(false, nil)
+	//table.printLinkList(true, nil)
+
 	//os.Exit(7)
+
 
 	fmt.Print("\n\n")
 
