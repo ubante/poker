@@ -1236,6 +1236,11 @@ func (mrp *MinRaisingPlayer) chooseAction(t *Table) {
 		mrp.call(t)
 	} else {
 		if mrp.bet == 0 {
+			if t.bigBlindValue > mrp.stack {
+				fmt.Println("I'm down to less than a BB so just checking.")
+				mrp.checkOrCall(t)
+				return
+			}
 			fmt.Printf("To keep the bluffers nervous, min-raising $%d\n", t.bigBlindValue)
 			mrp.raise(t.bigBlindValue)
 		} else {
@@ -1353,6 +1358,8 @@ This breaks my brain.
 type Table struct {
 	players []*Player
 	gameCtr int
+	bustLog map[int][]*Player
+	//bustLog [][]*Player
 
 	// The below get preset before each game.
 	community        Community
@@ -1369,7 +1376,7 @@ type Table struct {
 // getStatus is more verbose than toString.
 func (t *Table) getStatus() string {
 	status := "------\n"
-	status += fmt.Sprintf("%s -- %d players\n", t.bettingRound, len(t.players))
+	status += fmt.Sprintf("%s -- %d players left (game #%d)\n", t.bettingRound, len(t.players), t.gameCtr)
 
 	betTotal := 0
 	stackTotal := 0
@@ -1396,6 +1403,7 @@ func (t *Table) initialize() {
 
 	// https://stackoverflow.com/questions/33994677/pick-a-random-value-from-a-go-slice
 	rand.Seed(time.Now().Unix())
+	t.bustLog = make(map[int][]*Player)
 }
 
 /*
@@ -1765,6 +1773,10 @@ func (t *Table) removeBustedPlayers() {
 		bustedPlayers = append(bustedPlayers, p)
 	}
 
+	if len(bustedPlayers) == 0 {
+		return
+	}
+
 	for _, bp := range bustedPlayers {
 		bpp := *bp
 
@@ -1787,7 +1799,17 @@ func (t *Table) removeBustedPlayers() {
 		t.printLinkList(false, nil)
 		fmt.Printf("    ")
 		t.printLinkList(true, nil)
+
+		//// Record this busting.
+		//if bustedPlayerList, ok := t.bustLog[t.gameCtr]; ok {
+		//	bustedPlayerList = append(bustedPlayerList, bp)
+		//} else {
+		//	t.bustLog[t.gameCtr] = append(t.bustLog[t.gameCtr], bp)
+		//}
 	}
+
+	// Record this busting.
+	t.bustLog[t.gameCtr] = bustedPlayers
 }
 
 // Is this still needed?
@@ -1897,22 +1919,13 @@ func runTournament() {
 	table.addPlayer(&temp12)
 	temp13 := NewMinRaisingPlayer("Ming")
 	table.addPlayer(&temp13)
-
-	//table.printLinkList(false, nil)
-	//table.printLinkList(true, nil)
-	table.removeBustedPlayers()
-	//table.printLinkList(false, nil)
-	//table.printLinkList(true, nil)
-
-	//os.Exit(7)
-
-
 	fmt.Print("\n\n")
 
 	// Set an initial small blind value.
 	table.defineBlinds(25)
 
-	for i := 1; i <= 4; i++ {
+	//for i := 1; i <= 20; i++ {
+	for {
 		fmt.Println("============================")
 		table.preset()
 		fmt.Printf("This is game #%d.\n", table.gameCtr)
@@ -1965,10 +1978,41 @@ func runTournament() {
 
 		fmt.Println("Finding and paying the winners.")
 		table.payWinners()
+
+		fmt.Println("Removing busted players.")
 		table.removeBustedPlayers()
 
 		fmt.Println("At the end of the game, the table looks like this:")
 		fmt.Println(table.getStatus())
+
+		// Look for a winner.
+		if len(table.players) == 1 {
+			fmt.Println("After", table.gameCtr, "games, we have a winner.")
+			break
+		}
+
+		//time.Sleep(1 * time.Second)
+	}
+
+	fmt.Println("=============================================================")
+	fmt.Println("=============================================================")
+	fmt.Println("=============================================================")
+	fmt.Println()
+	winner := *table.players[0]
+	fmt.Println(winner.getName(), "has won with a stack of $", winner.getStack())
+	fmt.Println("Here's the bust log:")
+	var sortedGameCtrs []int
+	for gameCtr := range table.bustLog {
+		sortedGameCtrs = append(sortedGameCtrs, gameCtr)
+	}
+	sort.Sort(sort.IntSlice(sortedGameCtrs))
+	for _, bustedGameCtr := range sortedGameCtrs {
+		fmt.Printf("Round %d: ", bustedGameCtr)
+		for _, bustedPlayer := range table.bustLog[bustedGameCtr] {
+			bpp := *bustedPlayer
+			fmt.Printf("%s, ", bpp.getName())
+		}
+		fmt.Println()
 	}
 
 }
