@@ -498,6 +498,14 @@ func (e Evaluation) isBetterThan(otherEval Evaluation) bool {
 	return false
 }
 
+// TODO: move this to a package
+// https://medium.com/@MrToBe/the-singleton-object-oriented-design-pattern-in-golang-9f6ce75c21f7
+// http://marcio.io/2015/07/singleton-pattern-in-go/
+type MatrixModel struct {
+	filename string
+	matrixMap map[string]map[string]int
+}
+
 type HoleCards struct {
 	cardSet *CardSet
 }
@@ -1424,12 +1432,23 @@ func (t *Table) assignInitialButtonAndBlinds() {
 	t.button = *t.players[n]
 
 	fmt.Println("Assigning the button to:", t.button.getName())
-	t.smallBlindPlayer = t.button.getNextPlayer()
-	smallBlindDerefd := *t.smallBlindPlayer
-	fmt.Println("Assigning SB to:", smallBlindDerefd.getName())
-	t.bigBlindPlayer = smallBlindDerefd.getNextPlayer()
-	bigBlindPlayerDerefd := *t.bigBlindPlayer
-	fmt.Println("Assigning BB to:", bigBlindPlayerDerefd.getName())
+
+	if len(t.players) == 2 {
+		fmt.Println("Since we're head to head, the button is the small blind.")
+		t.smallBlindPlayer = &t.button
+		smallBlindDerefd := *t.smallBlindPlayer
+		fmt.Println("So assigning SB to:", smallBlindDerefd.getName())
+		t.bigBlindPlayer = t.button.getNextPlayer()
+		bigBlindPlayerDerefd := *t.bigBlindPlayer
+		fmt.Println("And assigning BB to:", bigBlindPlayerDerefd.getName())
+	} else {
+		t.smallBlindPlayer = t.button.getNextPlayer()
+		smallBlindDerefd := *t.smallBlindPlayer
+		fmt.Println("Assigning SB to:", smallBlindDerefd.getName())
+		t.bigBlindPlayer = smallBlindDerefd.getNextPlayer()
+		bigBlindPlayerDerefd := *t.bigBlindPlayer
+		fmt.Println("Assigning BB to:", bigBlindPlayerDerefd.getName())
+	}
 }
 
 func (t *Table) defineBlinds(sb int) {
