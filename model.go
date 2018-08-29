@@ -1598,8 +1598,8 @@ func (t *Table) countFoldedPlayers() {
 }
 
 func (t *Table) checkForOnePlayer() bool {
-	remaingPlayerCount := len(t.players)
-	if remaingPlayerCount > 1 {
+	remainingPlayers := len(t.players)
+	if remainingPlayers > 1 {
 		return false
 	}
 
