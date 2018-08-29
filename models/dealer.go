@@ -1,4 +1,4 @@
-package main
+package models
 
 import (
 	"fmt"
@@ -9,6 +9,7 @@ import (
 	"os"
 	"sort"
 	"time"
+	//"goven/poker/models"
 )
 
 /*
@@ -22,116 +23,98 @@ In addition to those definitions:
   - tournament: from the first game until there's only one player left
 */
 
-type Card struct {
-	suit         string
-	numericaRank int
-	rank         string
-}
+//type Card struct {
+//	Suit          string
+//	NumericalRank int
+//	Rank          string
+//}
 
+//func NewCard(s string, nr int) models.Card {
 func NewCard(s string, nr int) Card {
 	var c Card
-	c.suit = s
-	c.numericaRank = nr
+	c.Suit = s
+	c.NumericalRank = nr
 
 	if nr == 14 {
-		c.rank = "A" // Aces are aces.
+		c.Rank = "A" // Aces are aces.
 	}
 
 	switch nr {
 	case 14:
-		c.rank = "A" // Aces are aces.
+		c.Rank = "A" // Aces are aces.
 	case 13:
-		c.rank = "K"
+		c.Rank = "K"
 	case 12:
-		c.rank = "Q"
+		c.Rank = "Q"
 	case 11:
-		c.rank = "J"
+		c.Rank = "J"
 	case 10:
-		c.rank = "T"
+		c.Rank = "T"
 	default:
-		c.rank = strconv.Itoa(nr)
+		c.Rank = strconv.Itoa(nr)
 	}
 
 	return c
 }
 
-func (c *Card) toString() string {
-	return fmt.Sprintf("%s%s", c.suit, c.rank)
-}
+//func NewCardSet(cards ...models.Card) CardSet {
+func NewCardSet(cards ...Card) CardSet {
+	var cs CardSet
 
-func (c Card) String() string {
-	return c.toString()
-}
-
-func (c Card) isSuited(c2 Card) bool {
-	if c.suit == c2.suit {
-		return true
+	for _, card := range cards {
+		cs.Add(card)
 	}
 
-	return false
-}
-
-func (c Card) isPaired(c2 Card) bool {
-	if c.numericaRank == c2.numericaRank {
-		return true
-	}
-
-	return false
+	return cs
 }
 
 type CardSet struct {
+	//cards         []*models.Card
 	cards         []*Card
 	bestHand      *CardSet
 	bestEval      *Evaluation
 	possibleHands []*CardSet
 }
 
-func NewCardSet(cards ...Card) CardSet {
-	var cs CardSet
-
-	for _, card := range cards {
-		cs.add(card)
-	}
-
-	return cs
-}
-
-// I should rename toString to String and explicitly call
+// I should rename ToString to String and explicitly call
 // SomeType.String() when I want a string outside of Println()
-func (cs CardSet) toString() string {
+func (cs CardSet) ToString() string {
 	var toString string
 
 	for _, c := range cs.cards {
 		if toString == "" {
-			toString = c.toString()
+
+			toString = c.ToString()
 			continue
 		}
 
-		toString += fmt.Sprintf(" %s", c.toString())
+		toString += fmt.Sprintf(" %s", c)
+		//ToString += fmt.Sprintf(" %s", c.ToString())  // can this just be c ?
 	}
 
 	return toString
 }
 
 func (cs CardSet) String() string {
-	return cs.toString()
+	return cs.ToString()
 }
 
-func (cs *CardSet) add(c Card) {
+//func (cs *CardSet) Add(c models.Card) {
+func (cs *CardSet) Add(c Card) {
 	cs.cards = append(cs.cards, &c)
 }
 
 /*
 This will accept a cardset and return the union of it with this.
 */
-func (cs *CardSet) combine(cs2 CardSet) CardSet {
+func (cs *CardSet) Combine(cs2 CardSet) CardSet {
 	var combined CardSet
 
 	for _, card := range cs.cards {
-		combined.add(*card)
+		combined.Add(*card)
 	}
 	for _, card := range cs2.cards {
-		combined.add(*card)
+		combined.Add(*card)
 	}
 
 	return combined
@@ -139,7 +122,7 @@ func (cs *CardSet) combine(cs2 CardSet) CardSet {
 
 // Find all the possible combinations.
 // I like it gross.
-func (cs *CardSet) setPossibleHands() {
+func (cs *CardSet) SetPossibleHands() {
 	cards := cs.cards
 	for a := 0; a < len(cards)-4; a++ {
 		for b := a + 1; b < len(cards)-3; b++ {
@@ -155,8 +138,8 @@ func (cs *CardSet) setPossibleHands() {
 	}
 }
 
-func (cs *CardSet) findBestHand() {
-	cs.setPossibleHands()
+func (cs *CardSet) FindBestHand() {
+	cs.SetPossibleHands()
 	for _, ph := range cs.possibleHands {
 		eval := NewEvaluation(*ph)
 		//fmt.Println(eval)
@@ -178,10 +161,11 @@ func (cs *CardSet) findBestHand() {
 }
 
 /*
-I couldn't find a pop function - weird.
+I couldn't find a Pop function - weird.
 https://groups.google.com/forum/#!topic/Golang-nuts/obZI4uyZTe0
 */
-func (cs *CardSet) pop() *Card {
+//func (cs *CardSet) Pop() *models.Card {
+func (cs *CardSet) Pop() *Card {
 	card := cs.cards[0]
 	copy(cs.cards, cs.cards[1:])
 	cs.cards = cs.cards[:len(cs.cards)-1]
@@ -189,20 +173,20 @@ func (cs *CardSet) pop() *Card {
 	return card
 }
 
-func (cs *CardSet) shuffle() {
-	rand.Shuffle(cs.length(), func(i, j int) {
+func (cs *CardSet) Shuffle() {
+	rand.Shuffle(cs.Length(), func(i, j int) {
 		cs.cards[i], cs.cards[j] = cs.cards[j], cs.cards[i]
 	})
 }
 
-func (cs CardSet) length() int {
+func (cs CardSet) Length() int {
 	return len(cs.cards)
 }
 
-func (cs CardSet) getReverseOrderedNumericRanks() []int {
+func (cs CardSet) GetReverseOrderedNumericRanks() []int {
 	var orderedRanks []int
 	for _, card := range cs.cards {
-		orderedRanks = append(orderedRanks, card.numericaRank)
+		orderedRanks = append(orderedRanks, card.NumericalRank)
 	}
 	sort.Sort(sort.Reverse(sort.IntSlice(orderedRanks)))
 
@@ -277,9 +261,9 @@ func (e Evaluation) isFlush() bool {
 	var suit string
 	for _, card := range e.cardSet.cards {
 		if suit == "" {
-			suit = card.suit
+			suit = card.Suit
 		} else {
-			if card.suit != suit {
+			if card.Suit != suit {
 				return false
 			}
 		}
@@ -291,7 +275,7 @@ func (e Evaluation) isFlush() bool {
 func (e Evaluation) isStraight() bool {
 	// This needs to handle a wheel straight, ie A2345.
 
-	orderedRanks := e.cardSet.getReverseOrderedNumericRanks()
+	orderedRanks := e.cardSet.GetReverseOrderedNumericRanks()
 	previous := 0
 	for _, rank := range orderedRanks {
 		if previous == 0 {
@@ -318,7 +302,7 @@ func (e Evaluation) isStraight() bool {
 func (e Evaluation) hasMatches() map[int][]int {
 	frequency := make(map[int]int)
 	for _, card := range e.cardSet.cards {
-		frequency[card.numericaRank]++
+		frequency[card.NumericalRank]++
 	}
 
 	// We want the keys to the frequency map to be added to the matches
@@ -362,7 +346,7 @@ func (e *Evaluation) evaluate() {
 	if e.isStraight() && e.isFlush() {
 		e.humanEval = "staight flush"
 		e.primaryRank = 9
-		highestRank := e.cardSet.getReverseOrderedNumericRanks()[0]
+		highestRank := e.cardSet.GetReverseOrderedNumericRanks()[0]
 		if highestRank == 14 {
 			e.humanEval = "royal flush"
 		}
@@ -407,7 +391,7 @@ func (e *Evaluation) evaluate() {
 	if e.isFlush() {
 		e.humanEval = "flush"
 		e.primaryRank = 6
-		orderedRanks := e.cardSet.getReverseOrderedNumericRanks()
+		orderedRanks := e.cardSet.GetReverseOrderedNumericRanks()
 		e.secondaryRank = orderedRanks[0]
 		e.tertiaryRank = orderedRanks[1]
 		e.quaternaryRank = orderedRanks[2]
@@ -419,7 +403,7 @@ func (e *Evaluation) evaluate() {
 	if e.isStraight() {
 		e.humanEval = "straight"
 		e.primaryRank = 5
-		e.secondaryRank = e.cardSet.getReverseOrderedNumericRanks()[0]
+		e.secondaryRank = e.cardSet.GetReverseOrderedNumericRanks()[0]
 		return
 	}
 
@@ -515,15 +499,16 @@ func (hc *HoleCards) toString() string {
 		return ""
 	}
 
-	return hc.cardSet.toString()
+	return hc.cardSet.ToString()
 }
 
 func (hc HoleCards) String() string {
 	return hc.toString()
 }
 
+//func (hc *HoleCards) add(c models.Card) {
 func (hc *HoleCards) add(c Card) {
-	hc.cardSet.add(c)
+	hc.cardSet.Add(c)
 }
 
 func (hc *HoleCards) empty() {
@@ -536,7 +521,7 @@ func (hc *HoleCards) toss() {
 }
 
 func (hc HoleCards) isSuited() bool {
-	if hc.cardSet.cards[0].suit == hc.cardSet.cards[1].suit {
+	if hc.cardSet.cards[0].Suit == hc.cardSet.cards[1].Suit {
 		return true
 	}
 
@@ -568,7 +553,7 @@ func NewDeck() *Deck {
 		// https://stackoverflow.com/questions/21950244/is-there-a-way-to-iterate-over-a-range-of-integers-in-golang
 		for numericRank := range [13]int{} {
 			newCard := NewCard(suit, numericRank+2)
-			d.cardset.add(newCard)
+			d.cardset.Add(newCard)
 		}
 	}
 
@@ -581,7 +566,7 @@ func (d *Deck) getStatus() string {
 		if i != 0 && i%13 == 0 {
 			status += "\n"
 		}
-		status += card.toString()
+		status += card.ToString()
 		status += " "
 	}
 
@@ -589,15 +574,16 @@ func (d *Deck) getStatus() string {
 }
 
 func (d Deck) length() int {
-	return d.cardset.length()
+	return d.cardset.Length()
 }
 
 func (d *Deck) shuffle() {
-	d.cardset.shuffle()
+	d.cardset.Shuffle()
 }
 
+//func (d *Deck) getCard() *models.Card {
 func (d *Deck) getCard() *Card {
-	return d.cardset.pop()
+	return d.cardset.Pop()
 }
 
 // Maybe I can get away with just using a CardSet instead of this
@@ -621,8 +607,9 @@ func (c Community) String() string {
 	//return c.cards.getStatus()
 }
 
+//func (c *Community) add(card models.Card) {
 func (c *Community) add(card Card) {
-	c.cards.add(card)
+	c.cards.Add(card)
 }
 
 type SubPot struct {
@@ -808,6 +795,7 @@ type Player interface {
 	getBet() int
 	addToStack(payout int)
 	getStack() int
+	//addHoleCard(c models.Card)
 	addHoleCard(c Card)
 	getHoleCards() CardSet
 	payBlind(blindAmount int)
@@ -907,6 +895,7 @@ func (gp *GenericPlayer) getStack() int {
 	return gp.stack
 }
 
+//func (gp *GenericPlayer) addHoleCard(c models.Card) {
 func (gp *GenericPlayer) addHoleCard(c Card) {
 	gp.holeCards.add(c)
 }
@@ -1307,7 +1296,7 @@ type Table struct {
 	pot              Pot
 }
 
-// getStatus is more verbose than toString.
+// getStatus is more verbose than ToString.
 func (t *Table) getStatus() string {
 	status := "------\n"
 	status += fmt.Sprintf("%s -- %d players left (game #%d)\n", t.bettingRound, len(t.players), t.gameCtr)
@@ -1649,8 +1638,8 @@ func (t *Table) payWinners() {
 		// Evaluate the players' hand strengths.
 		fmt.Println("Evaluating the hand of", player.getName())
 		hc := player.getHoleCards()
-		combinedCardSet := hc.combine(*t.community.cards) // 7 cards.
-		combinedCardSet.findBestHand()
+		combinedCardSet := hc.Combine(*t.community.cards) // 7 cards.
+		combinedCardSet.FindBestHand()
 		fmt.Printf("%s's best hand is: %s\n", player.getName(), combinedCardSet.bestEval)
 		playerScores[p] = combinedCardSet.bestEval.flattenedScore
 	}
@@ -1753,10 +1742,10 @@ func (t *Table) payWinnersForSegment(segmentValue int, players []*Player) {
 		fmt.Println("-", ap.getName())
 
 		// I will pay the cost of reevaluating these hands so I don't
-		// have to add more methods to the Player interface.
+		// have to Add more methods to the Player interface.
 		aphc := ap.getHoleCards()
-		combinedCardset := aphc.combine(*t.community.cards)
-		combinedCardset.findBestHand()
+		combinedCardset := aphc.Combine(*t.community.cards)
+		combinedCardset.FindBestHand()
 		fmt.Printf("%s's best hand is: %s\n", ap.getName(), combinedCardset.bestEval)
 		thisEval := *combinedCardset.bestEval
 
@@ -1795,7 +1784,7 @@ func (t *Table) payWinnersForSegment(segmentValue int, players []*Player) {
 	os.Exit(4)
 }
 
-func runTournament() {
+func RunTournament() {
 	var table Table
 	table.initialize()
 
@@ -1867,11 +1856,11 @@ func runTournament() {
 
 		// Mock the community cards for testing Evaluation()
 		//mockedCardSet := NewCommunity()
-		//mockedCardSet.add(NewCard("H", 11))
-		//mockedCardSet.add(NewCard("H", 6))
-		//mockedCardSet.add(NewCard("C", 11))
-		//mockedCardSet.add(NewCard("S", 11))
-		//mockedCardSet.add(NewCard("C", 6))
+		//mockedCardSet.Add(NewCard("H", 11))
+		//mockedCardSet.Add(NewCard("H", 6))
+		//mockedCardSet.Add(NewCard("C", 11))
+		//mockedCardSet.Add(NewCard("S", 11))
+		//mockedCardSet.Add(NewCard("C", 6))
 		//table.community = mockedCardSet
 
 		table.postPreFlopBet()
@@ -1935,7 +1924,7 @@ func main() {
 	for i := 1; i <= 1; i++ {
 		fmt.Println(">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>")
 		fmt.Printf("Starting tournament #%d\n", i)
-		runTournament()
+		RunTournament()
 	}
 
 }
