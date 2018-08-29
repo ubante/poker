@@ -3,8 +3,6 @@ package models
 import (
 	"fmt"
 	"math/rand"
-	"strconv"
-
 	"gopkg.in/inconshreveable/log15.v2"
 	"os"
 	"sort"
@@ -22,85 +20,6 @@ In addition to those definitions:
   - game: what happens between the shuffling of the deck
   - tournament: from the first game until there's only one player left
 */
-
-func NewCard(s string, nr int) Card {
-	var c Card
-	c.Suit = s
-	c.NumericalRank = nr
-
-	if nr == 14 {
-		c.Rank = "A" // Aces are aces.
-	}
-
-	switch nr {
-	case 14:
-		c.Rank = "A" // Aces are aces.
-	case 13:
-		c.Rank = "K"
-	case 12:
-		c.Rank = "Q"
-	case 11:
-		c.Rank = "J"
-	case 10:
-		c.Rank = "T"
-	default:
-		c.Rank = strconv.Itoa(nr)
-	}
-
-	return c
-}
-
-func NewCardSet(cards ...Card) CardSet {
-	var cs CardSet
-
-	for _, card := range cards {
-		cs.Add(card)
-	}
-
-	return cs
-}
-
-func NewEvaluation(cardSet CardSet) *Evaluation {
-	var eval Evaluation
-	eval.cardSet = &cardSet
-	eval.evaluate()
-
-	// How to do the below in one line?
-	eval.allRanks[0] = &eval.primaryRank
-	eval.allRanks[1] = &eval.secondaryRank
-	eval.allRanks[2] = &eval.tertiaryRank
-	eval.allRanks[3] = &eval.quaternaryRank
-	eval.allRanks[4] = &eval.quinaryRank
-	eval.allRanks[5] = &eval.senaryRank
-	eval.flattenScore()
-
-	return &eval
-}
-
-func NewCommunity() Community {
-	ecs := NewCardSet()
-
-	var c Community
-	c.cards = &ecs
-
-	return c
-}
-
-func NewDeck() *Deck {
-	var d Deck
-	ecs := NewCardSet()
-	d.cardSet = &ecs
-
-	for _, suit := range []string{"S", "H", "D", "C"} {
-		// https://stackoverflow.com/questions/21950244/is-there-a-way-to-iterate-over-a-range-of-integers-in-golang
-		for numericRank := range [13]int{} {
-			newCard := NewCard(suit, numericRank+2)
-			d.cardSet.Add(newCard)
-		}
-	}
-
-	return &d
-}
 
 type SubPot struct {
 	amount              int

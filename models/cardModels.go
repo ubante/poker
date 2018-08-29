@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"math/rand"
 	"sort"
+	"strconv"
 )
 
 type Card struct {
@@ -506,7 +507,6 @@ func (d *Deck) shuffle() {
 	d.cardSet.Shuffle()
 }
 
-//func (d *Deck) getCard() *models.Card {
 func (d *Deck) getCard() *Card {
 	return d.cardSet.Pop()
 }
@@ -518,10 +518,87 @@ type Community struct {
 // Will eventually replace all the getStatus() methods.
 func (c Community) String() string {
 	return c.cards.String()
-	//return c.cards.getStatus()
 }
 
-//func (c *Community) Add(card models.Card) {
 func (c *Community) add(card Card) {
 	c.cards.Add(card)
+}
+
+func NewCard(s string, nr int) Card {
+	var c Card
+	c.Suit = s
+	c.NumericalRank = nr
+
+	if nr == 14 {
+		c.Rank = "A" // Aces are aces.
+	}
+
+	switch nr {
+	case 14:
+		c.Rank = "A" // Aces are aces.
+	case 13:
+		c.Rank = "K"
+	case 12:
+		c.Rank = "Q"
+	case 11:
+		c.Rank = "J"
+	case 10:
+		c.Rank = "T"
+	default:
+		c.Rank = strconv.Itoa(nr)
+	}
+
+	return c
+}
+
+func NewCardSet(cards ...Card) CardSet {
+	var cs CardSet
+
+	for _, card := range cards {
+		cs.Add(card)
+	}
+
+	return cs
+}
+
+func NewEvaluation(cardSet CardSet) *Evaluation {
+	var eval Evaluation
+	eval.cardSet = &cardSet
+	eval.evaluate()
+
+	// How to do the below in one line?
+	eval.allRanks[0] = &eval.primaryRank
+	eval.allRanks[1] = &eval.secondaryRank
+	eval.allRanks[2] = &eval.tertiaryRank
+	eval.allRanks[3] = &eval.quaternaryRank
+	eval.allRanks[4] = &eval.quinaryRank
+	eval.allRanks[5] = &eval.senaryRank
+	eval.flattenScore()
+
+	return &eval
+}
+
+func NewCommunity() Community {
+	ecs := NewCardSet()
+
+	var c Community
+	c.cards = &ecs
+
+	return c
+}
+
+func NewDeck() *Deck {
+	var d Deck
+	ecs := NewCardSet()
+	d.cardSet = &ecs
+
+	for _, suit := range []string{"S", "H", "D", "C"} {
+		// https://stackoverflow.com/questions/21950244/is-there-a-way-to-iterate-over-a-range-of-integers-in-golang
+		for numericRank := range [13]int{} {
+			newCard := NewCard(suit, numericRank+2)
+			d.cardSet.Add(newCard)
+		}
+	}
+
+	return &d
 }
