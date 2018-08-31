@@ -236,7 +236,8 @@ func (t *Table) initialize() {
 	t.gameCtr = 0
 
 	// https://stackoverflow.com/questions/33994677/pick-a-random-value-from-a-go-slice
-	rand.Seed(time.Now().Unix())
+	//rand.Seed(time.Now().Unix())
+	rand.Seed(time.Now().UnixNano())
 	t.bustLog = make(map[int][]*Player)
 }
 
@@ -694,7 +695,7 @@ func (t *Table) payWinnersForSegment(segmentValue int, players []*Player) {
 	os.Exit(4)
 }
 
-func RunTournament() {
+func RunTournament() map[string]int {
 	var table Table
 	table.initialize()
 
@@ -704,18 +705,16 @@ func RunTournament() {
 	//temp1 := NewAllInAlwaysPlayer("Alma")
 	//temp1.stack = 125 // To test Pot, we need two all-in short stack players.
 	//table.addPlayer(&temp1)
-	temp2 := NewGenericPlayer("Bert")
-	table.addPlayer(&temp2)
 	tempCSP := NewCallingStationPlayer("Cali")
 	table.addPlayer(&tempCSP)
 	temp4 := NewGenericPlayer("Dale")
 	table.addPlayer(&temp4)
-	temp5 := NewGenericPlayer("Eyor")
-	table.addPlayer(&temp5)
 	temp6 := NewFoldingPlayer("Fred")
 	table.addPlayer(&temp6)
-	testCTF := NewCallToFivePlayer("Greg")
+	testCTF := NewCallToFivePlayer("Carl")
 	table.addPlayer(&testCTF)
+	temp5 := NewGenericPlayer("Jenn")
+	table.addPlayer(&temp5)
 	tempStreetFlopper := NewStreetTestPlayer("Flow", "FLOP")
 	table.addPlayer(&tempStreetFlopper)
 	testStretTurner := NewStreetTestPlayer("Turk", "TURN")
@@ -800,6 +799,10 @@ func RunTournament() {
 	fmt.Println("=============================================================")
 	fmt.Println()
 	winner := *table.players[0]
+	placings := make(map[string]int)
+	place := 1
+	placings[winner.getName()] = place
+
 	fmt.Println(winner.getName(), "has won with a stack of $", winner.getStack())
 	fmt.Println("Here's the bust log:")
 	var sortedGameCtrs []int
@@ -807,6 +810,7 @@ func RunTournament() {
 		sortedGameCtrs = append(sortedGameCtrs, gameCtr)
 	}
 	sort.Sort(sort.IntSlice(sortedGameCtrs))
+
 	for _, bustedGameCtr := range sortedGameCtrs {
 		fmt.Printf("Round %d: ", bustedGameCtr)
 		for _, bustedPlayer := range table.bustLog[bustedGameCtr] {
@@ -816,4 +820,20 @@ func RunTournament() {
 		fmt.Println()
 	}
 
+	// Compute placing allowing for ties except for first place.  In a
+	// real tournament, there are tie-breakers used when multiple
+	// players bust in the same game.  For now, I'll just assign ties.
+	sort.Sort(sort.Reverse(sort.IntSlice(sortedGameCtrs)))
+	for _, rev := range sortedGameCtrs {
+		fmt.Printf("place: %d (round %d): ", place+1, rev)
+		for _, bustedPlayer := range table.bustLog[rev] {
+			bpp := *bustedPlayer
+			fmt.Printf("%s, ", bpp.getName())
+			place++
+			placings[bpp.getName()] = place
+		}
+		fmt.Println()
+	}
+
+	return placings
 }
