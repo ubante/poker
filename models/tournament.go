@@ -235,8 +235,7 @@ This happens at the start of tournaments.
 func (t *Table) initialize() {
 	t.gameCtr = 0
 
-	// https://stackoverflow.com/questions/33994677/pick-a-random-value-from-a-go-slice
-	//rand.Seed(time.Now().Unix())
+	// https://flaviocopes.com/go-random/
 	rand.Seed(time.Now().UnixNano())
 	t.bustLog = make(map[int][]*Player)
 }
@@ -260,18 +259,118 @@ func (t *Table) preset() {
 
 func (t *Table) addPlayer(player Player) {
 	if len(t.players) == 0 {
+		player.setPreviousPlayer(&player)
+		player.setNextPlayer(&player)
 		t.players = append(t.players, &player)
 		return
 	}
 
-	initialPlayer := *t.players[0]
-	lastPlayerPtr := t.players[len(t.players)-1]
-	lastPlayer := *lastPlayerPtr
-	lastPlayer.setNextPlayer(&player)
-	player.setPreviousPlayer(lastPlayerPtr)
-	player.setNextPlayer(t.players[0])
-	initialPlayer.setPreviousPlayer(&player)
-	t.players = append(t.players, &player)
+	fmt.Println("=====================")
+	firstPlayer := *t.players[0]
+	fmt.Println("At the start of addPlayer... first player is:", firstPlayer.getName())
+	t.printLinkList(false, nil)
+	t.printLinkList(true, nil)
+
+	// Find where to put this new player.
+	var prevIndex, nextIndex int
+	index := rand.Intn(len(t.players) + 1) // Intn(x) returns [0,x-1)
+	//fmt.Printf("I am %s; random number: %d and current size is %d;", player.getName(), index, len(t.players))
+
+	// Mock
+	switch len(t.players) {
+	case 1:
+		fmt.Println("Inside the mock switch 1.")
+		index = 0
+	case 2:
+		fmt.Println("Inside the mock switch 2.")
+		index = 2
+	case 3:
+		fmt.Println("Inside the mock switch 3.")
+		os.Exit(9)
+	}
+	fmt.Printf("I am %s; random number: %d and current size is %d;", player.getName(), index, len(t.players))
+
+
+
+	// Handle the edge cases of where the random number puts the new
+	// player first or last.
+	switch index {
+	case 0:
+		prevIndex = len(t.players)-1
+		nextIndex = 0
+	case len(t.players):
+		//prevIndex = index-1
+		prevIndex = len(t.players)-1
+		nextIndex = 0
+	default:
+		prevIndex = index-1
+		nextIndex = index
+	}
+	prevPlayer := *t.players[prevIndex]
+	nextPlayer := *t.players[nextIndex]
+
+	fmt.Println()
+	fmt.Printf(" so %d -> me -> %d\n", prevIndex, nextIndex)
+	fmt.Printf(" so %s -> me -> %s\n", prevPlayer.getName(), nextPlayer.getName())
+	fmt.Printf(" so %p -> me -> %p\n", prevPlayer, nextPlayer)
+
+	// Adjust the surrounding players.
+	prevPlayer.setNextPlayer(&player)
+	player.setPreviousPlayer(&prevPlayer)
+	player.setNextPlayer(&nextPlayer)
+	nextPlayer.setPreviousPlayer(&player)
+
+	fmt.Println("The above should be the same as the below:")
+	pp := *player.getPreviousPlayer()
+	pn := *player.getNextPlayer()
+	//fmt.Printf(" so %s -> me -> %s\n", prevPlayer.getName(), nextPlayer.getName())
+	fmt.Printf(" so %s -> me -> %s\n", pp.getName(), pn.getName())
+	fmt.Printf(" so %p -> me -> %p\n", pp, pn)
+
+	// I'm not crazy about having the almost redundant player slice.
+	// Will remove it later.
+	switch index {
+	case 0:
+		fmt.Println("Inside the index switch 0")
+		t.players = append([]*Player{&player}, t.players...)
+	case len(t.players):
+		fmt.Println("Inside the index switch len(t.players)")
+		t.players = append(t.players, &player)
+	default:
+		fmt.Println("Inside the index switch default")
+		//tempSlice := append(t.players[:index], &player)
+		//t.players = append(tempSlice, t.players[index:]...)
+		t.players = append(t.players[:index], append([]*Player{&player}, t.players[index:]...)...)
+	}
+
+	// The below goes on forever if we add to the end of t.players[].
+	// It could be a problem with printLinkList()
+	fmt.Println("After the addition:")
+	for i, pl := range t.players {
+		plDerefd := *pl
+		fmt.Printf("%d: %p <- %p -> %p\n", i, plDerefd.getPreviousPlayer(), pl, plDerefd.getNextPlayer())
+		/*
+0: 0xc042048420 <- 0xc042048340 -> 0xc0420483a0
+1: 0xc042048340 <- 0xc042048330 -> 0xc042048420
+2: 0xc042048470 <- 0xc042048420 -> 0xc042048480
+
+		 */
+	}
+
+
+	t.printLinkList(false, nil)
+	t.printLinkList(true, nil)
+
+
+
+	//initialPlayer := *t.players[0]
+	//lastPlayerPtr := t.players[len(t.players)-1]
+	//lastPlayer := *lastPlayerPtr
+	//lastPlayer.setNextPlayer(&player)
+	//player.setPreviousPlayer(lastPlayerPtr)
+	//player.setNextPlayer(t.players[0])
+	//initialPlayer.setPreviousPlayer(&player)
+	//t.players = append(t.players, &player)
 
 	return
 }
@@ -319,6 +418,7 @@ func (t Table) printLinkList(reverse bool, p *Player) {
 	} else {
 		fmt.Printf("%s <- ", player.getName())
 	}
+	time.Sleep(200 * time.Millisecond)
 
 	if reverse == false {
 		t.printLinkList(reverse, player.getNextPlayer()) // error (fixed)
@@ -729,6 +829,15 @@ func RunTournament() map[string]int {
 
 	// Set an initial small blind value.
 	table.defineBlinds(25)
+
+	fmt.Println(table.players)
+	fmt.Println(table.getStatus())
+
+	table.printLinkList(false, nil)
+	table.printLinkList(true, nil)
+	// Adam -> Cali -> Dale -> Fred -> Carl -> Jenn -> Flow -> Turk -> Rivv -> Ming -> Stan
+	// Adam <- Stan <- Ming <- Rivv <- Turk <- Flow <- Jenn <- Carl <- Fred <- Dale <- Cali
+	os.Exit(3)
 
 	//for i := 1; i <= 20; i++ {
 	for {
