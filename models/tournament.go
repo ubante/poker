@@ -257,6 +257,93 @@ func (t *Table) preset() {
 	}
 }
 
+func (t *Table) insertPlayer(position int, p *Player) {
+	player := *p
+	length := len(t.players)
+	if position > length {
+		fmt.Println("You are trying to add to a position that is impossible.")
+		fmt.Println("The slice length is", length, "so the last p is at position", length-1)
+		fmt.Println("so your position,", position, "is impossible.")
+		os.Exit(9)
+	}
+
+	fmt.Println("insertPlayerStart:")
+	for _, pl := range t.players {
+		plp := *pl
+		fmt.Println(" ", plp.getName())
+	}
+
+	firstPlayerInSlice := *t.players[0]
+	lastPlayerInSlice := *t.players[length-1]
+
+	// If the position is at the front of the slice, do this.
+	if position == 0 {
+		fmt.Println("Adding to the front.")
+		lastPlayerInSlice.setNextPlayer(&player)
+		player.setPreviousPlayer(&lastPlayerInSlice)
+		player.setNextPlayer(&firstPlayerInSlice)
+		firstPlayerInSlice.setPreviousPlayer(&player)
+		//t.players[length-1].post = p
+		//p.pre = t.players[length-1]
+		//p.post = t.players[0]
+		//t.players[0].pre = p
+		t.players = append([]*Player{p}, t.players...)
+
+		fmt.Println("insertPlayerEnd:")
+		for _, pl := range t.players {
+			plp := *pl
+			fmt.Println(" ", plp.getName())
+		}
+
+		return
+	}
+
+	// If the position is at the end of the slice, do this.
+	if position == len(t.players) {
+		fmt.Println("Adding to the end.")
+		lastPlayerInSlice.setNextPlayer(&player)
+		player.setPreviousPlayer(&lastPlayerInSlice)
+		player.setNextPlayer(&firstPlayerInSlice)
+		firstPlayerInSlice.setPreviousPlayer(&player)
+		//t.players[length-1].post = p
+		//p.pre = t.players[length-1]
+		//p.post = t.players[0]
+		//t.players[0].pre = p
+		t.players = append(t.players, p)
+
+		fmt.Println("insertPlayerEnd:")
+		for _, pl := range t.players {
+			plp := *pl
+			fmt.Println(" ", plp.getName())
+		}
+
+		return
+	}
+
+	// Otherwise, do this.
+	prevPlayerInSlice := *t.players[position-1]
+	nextPlayerInSlice := *t.players[position]
+
+	fmt.Println("Adding to position", position)
+	prevPlayerInSlice.setNextPlayer(&player)
+	player.setPreviousPlayer(&prevPlayerInSlice)
+	player.setNextPlayer(&nextPlayerInSlice)
+	nextPlayerInSlice.setPreviousPlayer(&player)
+	//t.players[position-1].post = p
+	//p.pre = t.players[position-1]
+	//p.post = t.players[position]
+	//t.players[position].pre = p
+	t.players = append(t.players[:position], append([]*Player{p}, t.players[position:]...)...)
+
+	fmt.Println("insertPlayerEnd:")
+	for _, pl := range t.players {
+		plp := *pl
+		fmt.Println(" ", plp.getName())
+	}
+
+	return
+}
+
 func (t *Table) addPlayer(player Player) {
 	if len(t.players) == 0 {
 		player.setPreviousPlayer(&player)
@@ -272,10 +359,7 @@ func (t *Table) addPlayer(player Player) {
 	t.printLinkList(true, nil)
 
 	// Find where to put this new player.
-	var prevIndex, nextIndex int
 	index := rand.Intn(len(t.players) + 1) // Intn(x) returns [0,x-1)
-	//fmt.Printf("I am %s; random number: %d and current size is %d;", player.getName(), index, len(t.players))
-
 	// Mock
 	switch len(t.players) {
 	case 1:
@@ -290,58 +374,7 @@ func (t *Table) addPlayer(player Player) {
 	}
 	fmt.Printf("I am %s; random number: %d and current size is %d;", player.getName(), index, len(t.players))
 
-
-
-	// Handle the edge cases of where the random number puts the new
-	// player first or last.
-	switch index {
-	case 0:
-		prevIndex = len(t.players)-1
-		nextIndex = 0
-	case len(t.players):
-		//prevIndex = index-1
-		prevIndex = len(t.players)-1
-		nextIndex = 0
-	default:
-		prevIndex = index-1
-		nextIndex = index
-	}
-	prevPlayer := *t.players[prevIndex]
-	nextPlayer := *t.players[nextIndex]
-
-	fmt.Println()
-	fmt.Printf(" so %d -> me -> %d\n", prevIndex, nextIndex)
-	fmt.Printf(" so %s -> me -> %s\n", prevPlayer.getName(), nextPlayer.getName())
-	fmt.Printf(" so %p -> me -> %p\n", prevPlayer, nextPlayer)
-
-	// Adjust the surrounding players.
-	prevPlayer.setNextPlayer(&player)
-	player.setPreviousPlayer(&prevPlayer)
-	player.setNextPlayer(&nextPlayer)
-	nextPlayer.setPreviousPlayer(&player)
-
-	fmt.Println("The above should be the same as the below:")
-	pp := *player.getPreviousPlayer()
-	pn := *player.getNextPlayer()
-	//fmt.Printf(" so %s -> me -> %s\n", prevPlayer.getName(), nextPlayer.getName())
-	fmt.Printf(" so %s -> me -> %s\n", pp.getName(), pn.getName())
-	fmt.Printf(" so %p -> me -> %p\n", pp, pn)
-
-	// I'm not crazy about having the almost redundant player slice.
-	// Will remove it later.
-	switch index {
-	case 0:
-		fmt.Println("Inside the index switch 0")
-		t.players = append([]*Player{&player}, t.players...)
-	case len(t.players):
-		fmt.Println("Inside the index switch len(t.players)")
-		t.players = append(t.players, &player)
-	default:
-		fmt.Println("Inside the index switch default")
-		//tempSlice := append(t.players[:index], &player)
-		//t.players = append(tempSlice, t.players[index:]...)
-		t.players = append(t.players[:index], append([]*Player{&player}, t.players[index:]...)...)
-	}
+	t.insertPlayer(index, &player)
 
 	// The below goes on forever if we add to the end of t.players[].
 	// It could be a problem with printLinkList()
@@ -401,6 +434,7 @@ func (t Table) printLinkList(reverse bool, p *Player) {
 	}
 	player := *p
 
+	// This is the block that ends recursion.
 	if reverse == false {
 		if player.getNextPlayer() == t.players[0] {
 			fmt.Println(player.getName())
@@ -421,7 +455,7 @@ func (t Table) printLinkList(reverse bool, p *Player) {
 	time.Sleep(200 * time.Millisecond)
 
 	if reverse == false {
-		t.printLinkList(reverse, player.getNextPlayer()) // error (fixed)
+		t.printLinkList(reverse, player.getNextPlayer())
 	} else {
 		t.printLinkList(reverse, player.getPreviousPlayer())
 	}
