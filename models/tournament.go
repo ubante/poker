@@ -381,16 +381,26 @@ func (t *Table) addPlayer(player Player) {
 	fmt.Println("After the addition:")
 	for i, pl := range t.players {
 		plDerefd := *pl
+		prevP := *plDerefd.getPreviousPlayer()
+		nextP := *plDerefd.getNextPlayer()
+		fmt.Printf("%d:         %s <-     %s  -> %s\n", i, prevP.getName(), plDerefd.getName(), nextP.getName())
 		fmt.Printf("%d: %p <- %p -> %p\n", i, plDerefd.getPreviousPlayer(), pl, plDerefd.getNextPlayer())
 		/*
-0: 0xc042048420 <- 0xc042048340 -> 0xc0420483a0
-1: 0xc042048340 <- 0xc042048330 -> 0xc042048420
-2: 0xc042048470 <- 0xc042048420 -> 0xc042048480
+		0: 0xc042048420 <- 0xc042048340 -> 0xc0420483a0
+		1: 0xc042048340 <- 0xc042048330 -> 0xc042048420
+		2: 0xc042048470 <- 0xc042048420 -> 0xc042048480
 
-		 */
+After the addition:
+0:         Adam <-     Cali  -> Adam
+0: 0xc0420543b0 <- 0xc042054330 -> 0xc0420543a0
+1:         Cali <-     Adam  -> Cali
+1: 0xc042054380 <- 0xc042054320 -> 0xc042054380
+Cali <- Adam <- Cali <- Adam <- Cali <- Adam <- Cali <-
+				 */
 	}
 
 
+	t.printLinkList(true, nil)
 	t.printLinkList(false, nil)
 	t.printLinkList(true, nil)
 
@@ -827,6 +837,55 @@ func (t *Table) payWinnersForSegment(segmentValue int, players []*Player) {
 		fmt.Printf("   %v\n", p)
 	}
 	os.Exit(4)
+}
+
+func testLinkTwoPlayers(p1, p2 Player) {
+	p1.setPreviousPlayer(&p2)
+	p1.setNextPlayer(&p2)
+	p2.setPreviousPlayer(&p1)
+	p2.setNextPlayer(&p2)
+}
+
+func (t *Table) testTableAdderNonRandom(player *Player) {
+	t.players = append(t.players, &player)
+}
+//func (t *Table) testTableAdderNonRandom(player Player) {
+//	t.players = append(t.players, &player)
+//}
+
+//func (t *Table) addPlayerToEnd(player Player)
+
+
+
+func TestTournament() {
+	var t Table
+	t.initialize()
+
+	ngp1 := NewGenericPlayer("Arun")
+	ngp2 := NewGenericPlayer("Buna")
+	testLinkTwoPlayers(&ngp1, &ngp2)
+	t.testTableAdderNonRandom(ngp1)
+	t.testTableAdderNonRandom(ngp2)
+	//t.testTableAdderNonRandom(&ngp1)
+	//t.testTableAdderNonRandom(&ngp2)
+
+	for i, pl := range t.players {
+		plDerefd := *pl
+		prevP := *plDerefd.getPreviousPlayer()
+		nextP := *plDerefd.getNextPlayer()
+		fmt.Printf("%d:         %s <-     %s  -> %s\n", i, prevP.getName(), plDerefd.getName(), nextP.getName())
+		fmt.Printf("%d: %p <- %p -> %p\n", i, plDerefd.getPreviousPlayer(), pl, plDerefd.getNextPlayer())
+
+/*
+0:         Buna <-     Arun  -> Buna
+0: 0xc042054320 <- 0xc042054330 -> 0xc042054320
+1:         Arun <-     Buna  -> Buna
+1: 0xc042054310 <- 0xc042054340 -> 0xc042054320
+
+ */
+	}
+
+	//t.printLinkList(false, nil)
 }
 
 func RunTournament() map[string]int {
