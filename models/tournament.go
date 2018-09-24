@@ -257,89 +257,58 @@ func (t *Table) preset() {
 	}
 }
 
-func (t *Table) insertPlayer(position int, p *Player) {
-	player := *p
+func (t *Table) insertPlayer(position int, p Player) {
 	length := len(t.players)
 	if position > length {
 		fmt.Println("You are trying to add to a position that is impossible.")
-		fmt.Println("The slice length is", length, "so the last p is at position", length-1)
+		fmt.Println("The slice length is", length, "so the last thang is at position", length-1)
 		fmt.Println("so your position,", position, "is impossible.")
 		os.Exit(9)
 	}
 
-	fmt.Println("insertPlayerStart:")
-	for _, pl := range t.players {
-		plp := *pl
-		fmt.Println(" ", plp.getName())
-	}
-
-	firstPlayerInSlice := *t.players[0]
-	lastPlayerInSlice := *t.players[length-1]
-
 	// If the position is at the front of the slice, do this.
 	if position == 0 {
 		fmt.Println("Adding to the front.")
-		lastPlayerInSlice.setNextPlayer(&player)
-		player.setPreviousPlayer(&lastPlayerInSlice)
-		player.setNextPlayer(&firstPlayerInSlice)
-		firstPlayerInSlice.setPreviousPlayer(&player)
-		//t.players[length-1].post = p
-		//p.pre = t.players[length-1]
-		//p.post = t.players[0]
-		//t.players[0].pre = p
-		t.players = append([]*Player{p}, t.players...)
+		lastThang := *t.players[length-1]
+		lastThang.setNextPlayer(&p)
+		p.setPreviousPlayer(t.players[length-1])
 
-		fmt.Println("insertPlayerEnd:")
-		for _, pl := range t.players {
-			plp := *pl
-			fmt.Println(" ", plp.getName())
-		}
+		firstThang := *t.players[0]
+		firstThang.setPreviousPlayer(&p)
+		p.setNextPlayer(t.players[0])
+
+		t.players = append([]*Player{&p}, t.players...)
 
 		return
 	}
 
 	// If the position is at the end of the slice, do this.
-	if position == len(t.players) {
+	if position == length {
 		fmt.Println("Adding to the end.")
-		lastPlayerInSlice.setNextPlayer(&player)
-		player.setPreviousPlayer(&lastPlayerInSlice)
-		player.setNextPlayer(&firstPlayerInSlice)
-		firstPlayerInSlice.setPreviousPlayer(&player)
-		//t.players[length-1].post = p
-		//p.pre = t.players[length-1]
-		//p.post = t.players[0]
-		//t.players[0].pre = p
-		t.players = append(t.players, p)
+		lastThang := *t.players[length-1]
+		lastThang.setNextPlayer(&p)
+		p.setPreviousPlayer(t.players[length-1])
 
-		fmt.Println("insertPlayerEnd:")
-		for _, pl := range t.players {
-			plp := *pl
-			fmt.Println(" ", plp.getName())
-		}
+		firstThang := *t.players[0]
+		firstThang.setPreviousPlayer(&p)
+		p.setNextPlayer(t.players[0])
+
+		t.players = append(t.players, &p)
 
 		return
 	}
 
 	// Otherwise, do this.
-	prevPlayerInSlice := *t.players[position-1]
-	nextPlayerInSlice := *t.players[position]
-
 	fmt.Println("Adding to position", position)
-	prevPlayerInSlice.setNextPlayer(&player)
-	player.setPreviousPlayer(&prevPlayerInSlice)
-	player.setNextPlayer(&nextPlayerInSlice)
-	nextPlayerInSlice.setPreviousPlayer(&player)
-	//t.players[position-1].post = p
-	//p.pre = t.players[position-1]
-	//p.post = t.players[position]
-	//t.players[position].pre = p
-	t.players = append(t.players[:position], append([]*Player{p}, t.players[position:]...)...)
+	middlePre := *t.players[position-1]
+	middlePre.setNextPlayer(&p)
+	p.setPreviousPlayer(t.players[position-1])
 
-	fmt.Println("insertPlayerEnd:")
-	for _, pl := range t.players {
-		plp := *pl
-		fmt.Println(" ", plp.getName())
-	}
+	middlePost := *t.players[position]
+	middlePost.setPreviousPlayer(&p)
+	p.setNextPlayer(t.players[position])
+
+	t.players = append(t.players[:position], append([]*Player{&p}, t.players[position:]...)...)
 
 	return
 }
@@ -374,10 +343,8 @@ func (t *Table) addPlayer(player Player) {
 	}
 	fmt.Printf("I am %s; random number: %d and current size is %d;", player.getName(), index, len(t.players))
 
-	t.insertPlayer(index, &player)
+	t.insertPlayer(index, player)
 
-	// The below goes on forever if we add to the end of t.players[].
-	// It could be a problem with printLinkList()
 	fmt.Println("After the addition:")
 	for i, pl := range t.players {
 		plDerefd := *pl
@@ -385,36 +352,58 @@ func (t *Table) addPlayer(player Player) {
 		nextP := *plDerefd.getNextPlayer()
 		fmt.Printf("%d:         %s <-     %s  -> %s\n", i, prevP.getName(), plDerefd.getName(), nextP.getName())
 		fmt.Printf("%d: %p <- %p -> %p\n", i, plDerefd.getPreviousPlayer(), pl, plDerefd.getNextPlayer())
-		/*
-		0: 0xc042048420 <- 0xc042048340 -> 0xc0420483a0
-		1: 0xc042048340 <- 0xc042048330 -> 0xc042048420
-		2: 0xc042048470 <- 0xc042048420 -> 0xc042048480
-
-After the addition:
-0:         Adam <-     Cali  -> Adam
-0: 0xc0420543b0 <- 0xc042054330 -> 0xc0420543a0
-1:         Cali <-     Adam  -> Cali
-1: 0xc042054380 <- 0xc042054320 -> 0xc042054380
-Cali <- Adam <- Cali <- Adam <- Cali <- Adam <- Cali <-
-				 */
 	}
-
 
 	t.printLinkList(true, nil)
 	t.printLinkList(false, nil)
 	t.printLinkList(true, nil)
 
+	/*
+GOROOT=C:\Go #gosetup
+GOPATH=C:\Users\condo\go #gosetup
+C:\Go\bin\go.exe build -i -o C:\Users\condo\AppData\Local\Temp\___go_build_casino_go.exe C:/Users/condo/go/src/goven/poker/casino.go #gosetup
+"C:\Program Files\JetBrains\GoLand 2018.1.3\bin\runnerw.exe" C:\Users\condo\AppData\Local\Temp\___go_build_casino_go.exe #gosetup
+>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+Starting tournament #1
+=====================
+At the start of addPlayer... first player is: Adam
+Adam
+Adam
+Inside the mock switch 1.
+I am Cali; random number: 0 and current size is 1;Adding to the front.
+After the addition:
+0:         Adam <-     Cali  -> Adam
+0: 0xc042048330 <- 0xc042048390 -> 0xc042048330
+1:         Cali <-     Adam  -> Cali
+1: 0xc042048390 <- 0xc042048330 -> 0xc042048390
+Cali <- Adam
+Cali -> Adam
+Cali <- Adam
+=====================
+At the start of addPlayer... first player is: Cali
+Cali -> Adam
+Cali <- Adam
+Inside the mock switch 2.
+I am Dale; random number: 2 and current size is 2;Adding to the end.
+After the addition:
+0:         Dale <-     Cali  -> Adam
+0: 0xc042048480 <- 0xc042048390 -> 0xc042048330
+1:         Cali <-     Adam  -> Dale
+1: 0xc042048390 <- 0xc042048330 -> 0xc042048480
+2:         Adam <-     Dale  -> Cali
+2: 0xc042048330 <- 0xc042048480 -> 0xc042048390
+Cali <- Dale <- Adam
+Cali -> Adam -> Dale
+Cali <- Dale <- Adam
+=====================
+At the start of addPlayer... first player is: Cali
+Cali -> Adam -> Dale
+Cali <- Dale <- Adam
+Inside the mock switch 3.
 
+Process finished with exit code 9
 
-	//initialPlayer := *t.players[0]
-	//lastPlayerPtr := t.players[len(t.players)-1]
-	//lastPlayer := *lastPlayerPtr
-	//lastPlayer.setNextPlayer(&player)
-	//player.setPreviousPlayer(lastPlayerPtr)
-	//player.setNextPlayer(t.players[0])
-	//initialPlayer.setPreviousPlayer(&player)
-	//t.players = append(t.players, &player)
-
+	 */
 	return
 }
 
@@ -847,7 +836,7 @@ func testLinkTwoPlayers(p1, p2 Player) {
 }
 
 func (t *Table) testTableAdderNonRandom(player *Player) {
-	t.players = append(t.players, &player)
+	t.players = append(t.players, player)
 }
 //func (t *Table) testTableAdderNonRandom(player Player) {
 //	t.players = append(t.players, &player)
@@ -861,20 +850,20 @@ func TestTournament() {
 	var t Table
 	t.initialize()
 
-	ngp1 := NewGenericPlayer("Arun")
-	ngp2 := NewGenericPlayer("Buna")
-	testLinkTwoPlayers(&ngp1, &ngp2)
-	t.testTableAdderNonRandom(ngp1)
-	t.testTableAdderNonRandom(ngp2)
-	//t.testTableAdderNonRandom(&ngp1)
-	//t.testTableAdderNonRandom(&ngp2)
-
-	for i, pl := range t.players {
-		plDerefd := *pl
-		prevP := *plDerefd.getPreviousPlayer()
-		nextP := *plDerefd.getNextPlayer()
-		fmt.Printf("%d:         %s <-     %s  -> %s\n", i, prevP.getName(), plDerefd.getName(), nextP.getName())
-		fmt.Printf("%d: %p <- %p -> %p\n", i, plDerefd.getPreviousPlayer(), pl, plDerefd.getNextPlayer())
+	//ngp1 := NewGenericPlayer("Arun")
+	//ngp2 := NewGenericPlayer("Buna")
+	//testLinkTwoPlayers(&ngp1, &ngp2)
+	//t.testTableAdderNonRandom(ngp1)
+	//t.testTableAdderNonRandom(ngp2)
+	////t.testTableAdderNonRandom(&ngp1)
+	////t.testTableAdderNonRandom(&ngp2)
+	//
+	//for i, pl := range t.players {
+	//	plDerefd := *pl
+	//	prevP := *plDerefd.getPreviousPlayer()
+	//	nextP := *plDerefd.getNextPlayer()
+	//	fmt.Printf("%d:         %s <-     %s  -> %s\n", i, prevP.getName(), plDerefd.getName(), nextP.getName())
+	//	fmt.Printf("%d: %p <- %p -> %p\n", i, plDerefd.getPreviousPlayer(), pl, plDerefd.getNextPlayer())
 
 /*
 0:         Buna <-     Arun  -> Buna
@@ -886,7 +875,7 @@ func TestTournament() {
 	}
 
 	//t.printLinkList(false, nil)
-}
+//}
 
 func RunTournament() map[string]int {
 	var table Table
