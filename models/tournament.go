@@ -268,7 +268,7 @@ func (t *Table) insertPlayer(position int, p Player) {
 
 	// If the position is at the front of the slice, do this.
 	if position == 0 {
-		fmt.Println("Adding to the front.")
+		fmt.Println("Adding", p.getName(), "to the front.")
 		lastThang := *t.players[length-1]
 		lastThang.setNextPlayer(&p)
 		p.setPreviousPlayer(t.players[length-1])
@@ -284,7 +284,7 @@ func (t *Table) insertPlayer(position int, p Player) {
 
 	// If the position is at the end of the slice, do this.
 	if position == length {
-		fmt.Println("Adding to the end.")
+		fmt.Println("Adding", p.getName(), "to the end.")
 		lastThang := *t.players[length-1]
 		lastThang.setNextPlayer(&p)
 		p.setPreviousPlayer(t.players[length-1])
@@ -299,7 +299,7 @@ func (t *Table) insertPlayer(position int, p Player) {
 	}
 
 	// Otherwise, do this.
-	fmt.Println("Adding to position", position)
+	fmt.Println("Adding", p.getName(), "to position", position)
 	middlePre := *t.players[position-1]
 	middlePre.setNextPlayer(&p)
 	p.setPreviousPlayer(t.players[position-1])
@@ -322,88 +322,10 @@ func (t *Table) addPlayer(player Player) {
 	}
 
 	fmt.Println("=====================")
-	firstPlayer := *t.players[0]
-	fmt.Println("At the start of addPlayer... first player is:", firstPlayer.getName())
-	t.printLinkList(false, nil)
-	t.printLinkList(true, nil)
-
-	// Find where to put this new player.
 	index := rand.Intn(len(t.players) + 1) // Intn(x) returns [0,x-1)
-	// Mock
-	switch len(t.players) {
-	case 1:
-		fmt.Println("Inside the mock switch 1.")
-		index = 0
-	case 2:
-		fmt.Println("Inside the mock switch 2.")
-		index = 2
-	case 3:
-		fmt.Println("Inside the mock switch 3.")
-		os.Exit(9)
-	}
-	fmt.Printf("I am %s; random number: %d and current size is %d;", player.getName(), index, len(t.players))
-
+	//fmt.Printf("I am %s; random number: %d and current size is %d;", player.getName(), index, len(t.players))
 	t.insertPlayer(index, player)
 
-	fmt.Println("After the addition:")
-	for i, pl := range t.players {
-		plDerefd := *pl
-		prevP := *plDerefd.getPreviousPlayer()
-		nextP := *plDerefd.getNextPlayer()
-		fmt.Printf("%d:         %s <-     %s  -> %s\n", i, prevP.getName(), plDerefd.getName(), nextP.getName())
-		fmt.Printf("%d: %p <- %p -> %p\n", i, plDerefd.getPreviousPlayer(), pl, plDerefd.getNextPlayer())
-	}
-
-	t.printLinkList(true, nil)
-	t.printLinkList(false, nil)
-	t.printLinkList(true, nil)
-
-	/*
-GOROOT=C:\Go #gosetup
-GOPATH=C:\Users\condo\go #gosetup
-C:\Go\bin\go.exe build -i -o C:\Users\condo\AppData\Local\Temp\___go_build_casino_go.exe C:/Users/condo/go/src/goven/poker/casino.go #gosetup
-"C:\Program Files\JetBrains\GoLand 2018.1.3\bin\runnerw.exe" C:\Users\condo\AppData\Local\Temp\___go_build_casino_go.exe #gosetup
->>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
-Starting tournament #1
-=====================
-At the start of addPlayer... first player is: Adam
-Adam
-Adam
-Inside the mock switch 1.
-I am Cali; random number: 0 and current size is 1;Adding to the front.
-After the addition:
-0:         Adam <-     Cali  -> Adam
-0: 0xc042048330 <- 0xc042048390 -> 0xc042048330
-1:         Cali <-     Adam  -> Cali
-1: 0xc042048390 <- 0xc042048330 -> 0xc042048390
-Cali <- Adam
-Cali -> Adam
-Cali <- Adam
-=====================
-At the start of addPlayer... first player is: Cali
-Cali -> Adam
-Cali <- Adam
-Inside the mock switch 2.
-I am Dale; random number: 2 and current size is 2;Adding to the end.
-After the addition:
-0:         Dale <-     Cali  -> Adam
-0: 0xc042048480 <- 0xc042048390 -> 0xc042048330
-1:         Cali <-     Adam  -> Dale
-1: 0xc042048390 <- 0xc042048330 -> 0xc042048480
-2:         Adam <-     Dale  -> Cali
-2: 0xc042048330 <- 0xc042048480 -> 0xc042048390
-Cali <- Dale <- Adam
-Cali -> Adam -> Dale
-Cali <- Dale <- Adam
-=====================
-At the start of addPlayer... first player is: Cali
-Cali -> Adam -> Dale
-Cali <- Dale <- Adam
-Inside the mock switch 3.
-
-Process finished with exit code 9
-
-	 */
 	return
 }
 
@@ -451,7 +373,7 @@ func (t Table) printLinkList(reverse bool, p *Player) {
 	} else {
 		fmt.Printf("%s <- ", player.getName())
 	}
-	time.Sleep(200 * time.Millisecond)
+	//time.Sleep(200 * time.Millisecond)
 
 	if reverse == false {
 		t.printLinkList(reverse, player.getNextPlayer())
@@ -789,10 +711,10 @@ func (t *Table) payWinnersForSegment(segmentValue int, players []*Player) {
 		// I will pay the cost of reevaluating these hands so I don't
 		// have to Add more methods to the Player interface.
 		aphc := ap.getHoleCards()
-		combinedCardset := aphc.Combine(*t.community.cards)
-		combinedCardset.FindBestHand()
-		fmt.Printf("%s's best hand is: %s\n", ap.getName(), combinedCardset.bestEval)
-		thisEval := *combinedCardset.bestEval
+		combinedCardSet := aphc.Combine(*t.community.cards)
+		combinedCardSet.FindBestHand()
+		fmt.Printf("%s's best hand is: %s\n", ap.getName(), combinedCardSet.bestEval)
+		thisEval := *combinedCardSet.bestEval
 
 		if len(segmentWinningPlayers) == 0 {
 			segmentWinningPlayers = []Player{ap}
@@ -827,55 +749,6 @@ func (t *Table) payWinnersForSegment(segmentValue int, players []*Player) {
 	}
 	os.Exit(4)
 }
-
-func testLinkTwoPlayers(p1, p2 Player) {
-	p1.setPreviousPlayer(&p2)
-	p1.setNextPlayer(&p2)
-	p2.setPreviousPlayer(&p1)
-	p2.setNextPlayer(&p2)
-}
-
-func (t *Table) testTableAdderNonRandom(player *Player) {
-	t.players = append(t.players, player)
-}
-//func (t *Table) testTableAdderNonRandom(player Player) {
-//	t.players = append(t.players, &player)
-//}
-
-//func (t *Table) addPlayerToEnd(player Player)
-
-
-
-func TestTournament() {
-	var t Table
-	t.initialize()
-
-	//ngp1 := NewGenericPlayer("Arun")
-	//ngp2 := NewGenericPlayer("Buna")
-	//testLinkTwoPlayers(&ngp1, &ngp2)
-	//t.testTableAdderNonRandom(ngp1)
-	//t.testTableAdderNonRandom(ngp2)
-	////t.testTableAdderNonRandom(&ngp1)
-	////t.testTableAdderNonRandom(&ngp2)
-	//
-	//for i, pl := range t.players {
-	//	plDerefd := *pl
-	//	prevP := *plDerefd.getPreviousPlayer()
-	//	nextP := *plDerefd.getNextPlayer()
-	//	fmt.Printf("%d:         %s <-     %s  -> %s\n", i, prevP.getName(), plDerefd.getName(), nextP.getName())
-	//	fmt.Printf("%d: %p <- %p -> %p\n", i, plDerefd.getPreviousPlayer(), pl, plDerefd.getNextPlayer())
-
-/*
-0:         Buna <-     Arun  -> Buna
-0: 0xc042054320 <- 0xc042054330 -> 0xc042054320
-1:         Arun <-     Buna  -> Buna
-1: 0xc042054310 <- 0xc042054340 -> 0xc042054320
-
- */
-	}
-
-	//t.printLinkList(false, nil)
-//}
 
 func RunTournament() map[string]int {
 	var table Table
@@ -915,11 +788,10 @@ func RunTournament() map[string]int {
 	fmt.Println(table.players)
 	fmt.Println(table.getStatus())
 
-	table.printLinkList(false, nil)
-	table.printLinkList(true, nil)
+	//table.printLinkList(false, nil)
+	//table.printLinkList(true, nil)
 	// Adam -> Cali -> Dale -> Fred -> Carl -> Jenn -> Flow -> Turk -> Rivv -> Ming -> Stan
 	// Adam <- Stan <- Ming <- Rivv <- Turk <- Flow <- Jenn <- Carl <- Fred <- Dale <- Cali
-	os.Exit(3)
 
 	//for i := 1; i <= 20; i++ {
 	for {
@@ -985,9 +857,6 @@ func RunTournament() map[string]int {
 		//time.Sleep(1 * time.Second)
 	}
 
-	fmt.Println("=============================================================")
-	fmt.Println("=============================================================")
-	fmt.Println("=============================================================")
 	fmt.Println()
 	winner := *table.players[0]
 	placings := make(map[string]int)
