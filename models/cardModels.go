@@ -529,13 +529,13 @@ func NewCard(s string, nr int) Card {
 	c.Suit = s
 	c.NumericalRank = nr
 
-	if nr == 14 {
-		c.Rank = "A" // Aces are aces.
-	}
-
+	//if nr == 14 {
+	//	c.Rank = "A" // Aces are aces.
+	//}
+	//
 	switch nr {
 	case 14:
-		c.Rank = "A" // Aces are aces.
+		c.Rank = "A"  // Aces are aces.
 	case 13:
 		c.Rank = "K"
 	case 12:
