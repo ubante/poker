@@ -755,15 +755,9 @@ func RunTournament() map[string]int {
 	table.initialize()
 
 	temp := NewAllInAlwaysPlayer("Adam")
-	//temp.stack = 100 // To test Pot, we need two all-in short stack players.
 	table.addPlayer(&temp)
-	//temp1 := NewAllInAlwaysPlayer("Alma")
-	//temp1.stack = 125 // To test Pot, we need two all-in short stack players.
-	//table.addPlayer(&temp1)
 	tempCSP := NewCallingStationPlayer("Cali")
 	table.addPlayer(&tempCSP)
-	temp4 := NewGenericPlayer("Dale")
-	table.addPlayer(&temp4)
 	temp6 := NewFoldingPlayer("Fred")
 	table.addPlayer(&temp6)
 	testCTF := NewCallToFivePlayer("Carl")
@@ -778,8 +772,14 @@ func RunTournament() map[string]int {
 	table.addPlayer(&testStreetRiverer)
 	tempMinRaiser := NewMinRaisingPlayer("Ming")
 	table.addPlayer(&tempMinRaiser)
-	tempSMP5 := NewSklanskyMalmuthPlayer("Stan", 5)
+	tempSMP1 := NewSklanskyMalmuthPlayer("Saul", 5)
+	table.addPlayer(&tempSMP1)
+	tempSMP5 := NewSklanskyMalmuthPlayer("Stan", 2)
 	table.addPlayer(&tempSMP5)
+	tempSMMP5 := NewSklanskyMalmuthModifiedPlayer("Mits", 5)
+	table.addPlayer(&tempSMMP5)
+	tempSMMP6 := NewSklanskyMalmuthModifiedPlayer("Muts", 2)
+	table.addPlayer(&tempSMMP6)
 	fmt.Print("\n\n")
 
 	// Set an initial small blind value.
@@ -788,12 +788,6 @@ func RunTournament() map[string]int {
 	fmt.Println(table.players)
 	fmt.Println(table.getStatus())
 
-	//table.printLinkList(false, nil)
-	//table.printLinkList(true, nil)
-	// Adam -> Cali -> Dale -> Fred -> Carl -> Jenn -> Flow -> Turk -> Rivv -> Ming -> Stan
-	// Adam <- Stan <- Ming <- Rivv <- Turk <- Flow <- Jenn <- Carl <- Fred <- Dale <- Cali
-
-	//for i := 1; i <= 20; i++ {
 	for {
 		fmt.Println("============================")
 		table.preset()
@@ -807,6 +801,9 @@ func RunTournament() map[string]int {
 		table.preFlopBet()
 		table.moveBetsToPot()
 		fmt.Println(table.getStatus())
+
+		//fmt.Println("exiting after one iteration to troubleshoot the different singletons")
+		//os.Exit(6)
 
 		table.bettingRound = "FLOP"
 		fmt.Println("---------------------- Dealing the flop.")
@@ -826,15 +823,6 @@ func RunTournament() map[string]int {
 		fmt.Println("---------------------- Dealing the river.")
 		table.dealRiver()
 
-		// Mock the community cards for testing Evaluation()
-		//mockedCardSet := NewCommunity()
-		//mockedCardSet.Add(NewCard("H", 11))
-		//mockedCardSet.Add(NewCard("H", 6))
-		//mockedCardSet.Add(NewCard("C", 11))
-		//mockedCardSet.Add(NewCard("S", 11))
-		//mockedCardSet.Add(NewCard("C", 6))
-		//table.community = mockedCardSet
-
 		table.postPreFlopBet()
 		table.moveBetsToPot()
 		fmt.Println(table.getStatus())
@@ -852,6 +840,14 @@ func RunTournament() map[string]int {
 		if len(table.players) == 1 {
 			fmt.Println("After", table.gameCtr, "games, we have a winner.")
 			break
+		}
+
+		// Increase the blind every 20 games.
+		if table.gameCtr % 20 == 0 {
+			currentSmallBlind := table.smallBlindValue
+			table.defineBlinds(currentSmallBlind *2)
+			fmt.Printf("After %d games, increasing small blind from $%d to $%d\n.", table.gameCtr,
+				currentSmallBlind, currentSmallBlind*2)
 		}
 
 		//time.Sleep(1 * time.Second)

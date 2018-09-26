@@ -15,18 +15,20 @@ import (
 // be called from different places but the file will be read in just
 // once.
 
+// We shouldn't need a separate class for this.
+
 // https://medium.com/@MrToBe/the-singleton-object-oriented-design-pattern-in-golang-9f6ce75c21f7
 // http://marcio.io/2015/07/singleton-pattern-in-go/
 
-type Score struct {
+type ScoreModified struct {
 	filename string
 	matrixMap map[string]map[string]int
 }
 
-var singleton *Score
-var once sync.Once
+var singletonModified *ScoreModified
+var onceModified sync.Once
 
-func (s *Score) readInFile() {
+func (s *ScoreModified) readInFile() {
 	fmt.Println("Oh snap; reading in:", s.filename)
 	file, err := os.Open(s.filename)
 	if err != nil {
@@ -72,6 +74,7 @@ func (s *Score) readInFile() {
 
 		// These are the Sklansky Malmuth values.
 		commaSeparated := strings.Split(colonSeparated[1], ",")
+		//fmt.Println("                    ", commaSeparated[2])
 
 		// Assign these values to the map.
 		for j := 0; j < len(commaSeparated); j++ {
@@ -81,14 +84,16 @@ func (s *Score) readInFile() {
 					commaSeparated[j])
 				os.Exit(3)
 			}
+			//smMap[ranks[i]][ranks[j]] = num
 			s.matrixMap[ranks[i]][ranks[j]] = num
+
 		}
 	}
 }
 
 // Given a two character string that represents the holecards, return
 // the SM value in an int.
-func (s Score) GetScoreOfString(hcString string) int {
+func (s ScoreModified) GetScoreOfString(hcString string) int {
 	// https://stackoverflow.com/questions/15018545/how-to-index-characters-in-a-golang-string
 	value1 := string([]rune(hcString)[0])
 	value2 := string([]rune(hcString)[1])
@@ -96,39 +101,10 @@ func (s Score) GetScoreOfString(hcString string) int {
 	return s.matrixMap[value1][value2]
 }
 
-func rankToNumericRank(rank string) int {
-	switch rank {
-	case "A":
-		return 14  // Aces are aces.
-	case "K":
-		return 13
-	case "Q":
-		return 12
-	case "J":
-		return 11
-	case "T":
-		return 10
-	default:
-		numericRank, _ := strconv.Atoi(rank)
-		return numericRank
-	}
-}
-
-func isFirstGreater(v1, v2 string) bool {
-	v1numericRank := rankToNumericRank(v1)
-	v2numericRank := rankToNumericRank(v2)
-
-	if v1numericRank > v2numericRank {
-		return true
-	} else {
-		return false
-	}
-}
-
 // This class cannot know of HoleCards because that would create an
 // import cycle.  Instead, accept the HoleCards.ToString().  Inputs
 // should look like "S4" or "HQ".
-func (s Score) GetScoreOfHoleCardStrings(hc1, hc2 string) int {
+func (s ScoreModified) GetScoreOfHoleCardStrings(hc1, hc2 string) int {
 	hc1suit := string([]rune(hc1)[0])
 	hc1value := string([]rune(hc1)[1])
 	hc2suit := string([]rune(hc2)[0])
@@ -154,21 +130,21 @@ func (s Score) GetScoreOfHoleCardStrings(hc1, hc2 string) int {
 	return 1999
 }
 
-func (s *Score) GetFilename() string {
+func (s *ScoreModified) GetFilename() string {
 	return s.filename
 }
 
-func (s *Score) SetFilename(fn string) {
+func (s *ScoreModified) SetFilename(fn string) {
 	s.filename = fn
 }
 
-func GetSMScore() *Score {
-	once.Do(func() {
-		singleton = &Score{}
-		singleton.SetFilename("poker/matrix/holeCardValues_SklanskyMalmuth.txt")
-		singleton.readInFile()
+func GetSMModifiedScore() *ScoreModified {
+	onceModified.Do(func() {
+		singletonModified = &ScoreModified{}
+		singletonModified.SetFilename("poker/matrix/holeCardValues_SklanskyMalmuthModified.txt")
+		singletonModified.readInFile()
 	})
-	return singleton
+	return singletonModified
 }
 
 
