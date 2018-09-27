@@ -36,7 +36,7 @@ type GenericPlayer struct {
 	nextPlayer     *Player
 	previousPlayer *Player
 
-	// The below get preset after each game.
+	// The below get preset before each game.
 	holeCards HoleCards
 	stack     int
 	bet       int
@@ -70,7 +70,7 @@ func (gp GenericPlayer) String() string {
 /*
 Preset before each game.
 
-Maybe use "prepare()" instead of "preset()" because the latter implies
+Maybe use "prepare()" instead of "Preset()" because the latter implies
 something you do afterwards.
 */
 func (gp *GenericPlayer) preset() {

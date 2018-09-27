@@ -515,7 +515,7 @@ type Community struct {
 	cards *CardSet
 }
 
-// Will eventually replace all the getStatus() methods.
+// Will eventually replace all the GetStatus() methods.
 func (c Community) String() string {
 	return c.cards.String()
 }

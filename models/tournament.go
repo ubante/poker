@@ -207,8 +207,8 @@ type Table struct {
 	pot              Pot
 }
 
-// getStatus is more verbose than ToString.
-func (t *Table) getStatus() string {
+// GetStatus is more verbose than ToString.
+func (t *Table) GetStatus() string {
 	status := "------\n"
 	status += fmt.Sprintf("%s -- %d players left (game #%d)\n", t.bettingRound, len(t.players), t.gameCtr)
 
@@ -232,18 +232,19 @@ func (t *Table) getStatus() string {
 /*
 This happens at the start of tournaments.
 */
-func (t *Table) initialize() {
+func (t *Table) Initialize() {
 	t.gameCtr = 0
 
 	// https://flaviocopes.com/go-random/
 	rand.Seed(time.Now().UnixNano())
 	t.bustLog = make(map[int][]*Player)
+	t.community = NewCommunity()  // This is so we can print the Table status preflop.
 }
 
 /*
 This happens at the start of games.
 */
-func (t *Table) preset() {
+func (t *Table) Preset() {
 	t.gameCtr++
 
 	t.deck = NewDeck()
@@ -313,7 +314,7 @@ func (t *Table) insertPlayer(position int, p Player) {
 	return
 }
 
-func (t *Table) addPlayer(player Player) {
+func (t *Table) AddPlayer(player Player) {
 	if len(t.players) == 0 {
 		player.setPreviousPlayer(&player)
 		player.setNextPlayer(&player)
@@ -425,7 +426,7 @@ func (t *Table) postBlinds() (table Table) {
 	return
 }
 
-func (t *Table) dealHoleCards() {
+func (t *Table) DealHoleCards() {
 	for _, p := range t.players {
 		player := *p
 		player.addHoleCard(*t.deck.getCard())
@@ -513,7 +514,7 @@ func (t *Table) genericBet(firstBetter *Player) {
 	}
 
 	fmt.Println("After going around the table once, we have:")
-	fmt.Println(t.getStatus())
+	fmt.Println(t.GetStatus())
 
 	// There may be raises and re-raises so handle that.
 	for {
@@ -568,7 +569,7 @@ func (t *Table) moveBetsToPot() {
 	fmt.Println(t.pot)
 }
 
-func (t *Table) dealFlop() {
+func (t *Table) DealFlop() {
 	t.bettingRound = "FLOP"
 	for i := 1; i <= 3; i++ {
 		card := t.deck.getCard()
@@ -752,72 +753,72 @@ func (t *Table) payWinnersForSegment(segmentValue int, players []*Player) {
 
 func RunTournament() map[string]int {
 	var table Table
-	table.initialize()
+	table.Initialize()
 
 	temp := NewAllInAlwaysPlayer("Adam")
-	table.addPlayer(&temp)
+	table.AddPlayer(&temp)
 	tempCSP := NewCallingStationPlayer("Cali")
-	table.addPlayer(&tempCSP)
+	table.AddPlayer(&tempCSP)
 	temp6 := NewFoldingPlayer("Fred")
-	table.addPlayer(&temp6)
+	table.AddPlayer(&temp6)
 	testCTF := NewCallToFivePlayer("Carl")
-	table.addPlayer(&testCTF)
+	table.AddPlayer(&testCTF)
 	temp5 := NewGenericPlayer("Jenn")
-	table.addPlayer(&temp5)
+	table.AddPlayer(&temp5)
 	tempStreetFlopper := NewStreetTestPlayer("Flow", "FLOP")
-	table.addPlayer(&tempStreetFlopper)
+	table.AddPlayer(&tempStreetFlopper)
 	testStretTurner := NewStreetTestPlayer("Turk", "TURN")
-	table.addPlayer(&testStretTurner)
+	table.AddPlayer(&testStretTurner)
 	testStreetRiverer := NewStreetTestPlayer("Rivv", "RIVER")
-	table.addPlayer(&testStreetRiverer)
+	table.AddPlayer(&testStreetRiverer)
 	tempMinRaiser := NewMinRaisingPlayer("Ming")
-	table.addPlayer(&tempMinRaiser)
+	table.AddPlayer(&tempMinRaiser)
 	tempSMP1 := NewSklanskyMalmuthPlayer("Saul", 5)
-	table.addPlayer(&tempSMP1)
+	table.AddPlayer(&tempSMP1)
 	tempSMP5 := NewSklanskyMalmuthPlayer("Stan", 2)
-	table.addPlayer(&tempSMP5)
+	table.AddPlayer(&tempSMP5)
 	tempSMMP5 := NewSklanskyMalmuthModifiedPlayer("Mits", 5)
-	table.addPlayer(&tempSMMP5)
+	table.AddPlayer(&tempSMMP5)
 	tempSMMP6 := NewSklanskyMalmuthModifiedPlayer("Muts", 2)
-	table.addPlayer(&tempSMMP6)
+	table.AddPlayer(&tempSMMP6)
 	fmt.Print("\n\n")
 
 	// Set an initial small blind value.
 	table.defineBlinds(25)
 
 	fmt.Println(table.players)
-	fmt.Println(table.getStatus())
+	fmt.Println(table.GetStatus())
 
 	for {
 		fmt.Println("============================")
-		table.preset()
+		table.Preset()
 		fmt.Printf("This is game #%d.\n", table.gameCtr)
 		table.assignInitialButtonAndBlinds()
 		table.bettingRound = "PREFLOP"
 
 		table.postBlinds()
-		fmt.Println(table.getStatus())
-		table.dealHoleCards()
+		fmt.Println(table.GetStatus())
+		table.DealHoleCards()
 		table.preFlopBet()
 		table.moveBetsToPot()
-		fmt.Println(table.getStatus())
+		fmt.Println(table.GetStatus())
 
 		//fmt.Println("exiting after one iteration to troubleshoot the different singletons")
 		//os.Exit(6)
 
 		table.bettingRound = "FLOP"
 		fmt.Println("---------------------- Dealing the flop.")
-		table.dealFlop()
+		table.DealFlop()
 		table.postPreFlopBet()
 		table.moveBetsToPot()
-		fmt.Println(table.getStatus())
+		fmt.Println(table.GetStatus())
 
 		table.bettingRound = "TURN"
 		fmt.Println("---------------------- Dealing the turn.")
 		table.dealTurn()
 		table.postPreFlopBet()
 		table.moveBetsToPot()
-		fmt.Println(table.getStatus())
+		fmt.Println(table.GetStatus())
 
 		table.bettingRound = "RIVER"
 		fmt.Println("---------------------- Dealing the river.")
@@ -825,7 +826,7 @@ func RunTournament() map[string]int {
 
 		table.postPreFlopBet()
 		table.moveBetsToPot()
-		fmt.Println(table.getStatus())
+		fmt.Println(table.GetStatus())
 
 		fmt.Println("Finding and paying the winners.")
 		table.payWinners()
@@ -834,7 +835,7 @@ func RunTournament() map[string]int {
 		table.removeBustedPlayers()
 
 		fmt.Println("At the end of the game, the table looks like this:")
-		fmt.Println(table.getStatus())
+		fmt.Println(table.GetStatus())
 
 		// Look for a winner.
 		if len(table.players) == 1 {
