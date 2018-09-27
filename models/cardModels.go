@@ -161,6 +161,14 @@ func (cs CardSet) GetReverseOrderedNumericRanks() []int {
 	return orderedRanks
 }
 
+func (cs CardSet) isEmpty() bool {
+	if len(cs.cards) == 0 {
+		return true
+	}
+
+	return false
+}
+
 /*
 Primary ranks are:
   9: Straight flush

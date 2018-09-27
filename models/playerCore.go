@@ -24,7 +24,7 @@ type Player interface {
 	getStack() int
 	//addHoleCard(c models.Card)
 	addHoleCard(c Card)
-	getHoleCards() CardSet
+	getHoleCardsCardSet() CardSet
 	payBlind(blindAmount int)
 	checkHasFolded() bool
 	checkIsAllIn() bool
@@ -127,7 +127,7 @@ func (gp *GenericPlayer) addHoleCard(c Card) {
 	gp.holeCards.Add(c)
 }
 
-func (gp *GenericPlayer) getHoleCards() CardSet {
+func (gp *GenericPlayer) getHoleCardsCardSet() CardSet {
 	return *gp.holeCards.cardSet
 }
 

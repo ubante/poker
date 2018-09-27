@@ -605,7 +605,7 @@ func (t *Table) payWinners() {
 
 		// Evaluate the players' hand strengths.
 		fmt.Println("Evaluating the hand of", player.getName())
-		hc := player.getHoleCards()
+		hc := player.getHoleCardsCardSet()
 		combinedCardSet := hc.Combine(*t.community.cards) // 7 cards.
 		combinedCardSet.FindBestHand()
 		fmt.Printf("%s's best hand is: %s\n", player.getName(), combinedCardSet.bestEval)
@@ -711,7 +711,7 @@ func (t *Table) payWinnersForSegment(segmentValue int, players []*Player) {
 
 		// I will pay the cost of reevaluating these hands so I don't
 		// have to Add more methods to the Player interface.
-		aphc := ap.getHoleCards()
+		aphc := ap.getHoleCardsCardSet()
 		combinedCardSet := aphc.Combine(*t.community.cards)
 		combinedCardSet.FindBestHand()
 		fmt.Printf("%s's best hand is: %s\n", ap.getName(), combinedCardSet.bestEval)
