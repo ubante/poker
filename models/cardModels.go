@@ -537,6 +537,23 @@ func rankToNumericRank(stringRank string) int {
 	}
 }
 
+func numericRankToRank(numericRank int) string {
+	switch numericRank {
+	case 14:
+		return "A"  // Aces are aces.
+	case 13:
+		return "K"
+	case 12:
+		return "Q"
+	case 11:
+		return "J"
+	case 10:
+		return "T"
+	default:
+		return strconv.Itoa(numericRank)
+	}
+}
+
 // This is in case you want to pull a specific card from the Deck so you
 // can deal it to a player for testing.  The cardValue should be
 // something like C3, HQ, or ST.
@@ -550,12 +567,15 @@ func (d *Deck) getCardOfValue(cardValue string) *Card {
 	for i, c := range d.cardSet.cards {
 		card := *c
 		if card.IsSuited(requestedCard) && card.IsPaired(requestedCard) {
-			fmt.Println("Found:", requestedCard, "at", i, card)
+			//fmt.Println("Found:", requestedCard, "at", i, card)
+			d.cardSet.cards = append(d.cardSet.cards[:i], d.cardSet.cards[i+1:]...)
 			break
 		}
 	}
 
-	//return d.getCard()
+	// Should we check that the above loop found the card?  It is
+	// possible that it has already been dealt.
+
 	return &requestedCard
 }
 
@@ -576,25 +596,7 @@ func NewCard(s string, nr int) Card {
 	var c Card
 	c.Suit = s
 	c.NumericalRank = nr
-
-	//if nr == 14 {
-	//	c.Rank = "A" // Aces are aces.
-	//}
-	//
-	switch nr {
-	case 14:
-		c.Rank = "A"  // Aces are aces.
-	case 13:
-		c.Rank = "K"
-	case 12:
-		c.Rank = "Q"
-	case 11:
-		c.Rank = "J"
-	case 10:
-		c.Rank = "T"
-	default:
-		c.Rank = strconv.Itoa(nr)
-	}
+	c.Rank = numericRankToRank(nr)
 
 	return c
 }
