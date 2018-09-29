@@ -33,7 +33,6 @@ func Guess() {
 	// the odds of our hero having a better hand.
 	heroHCCS := hero.getHoleCardsCardSet()
 	heroCombinedCardSet := heroHCCS.Combine(*table.community.cards)
-	//heroHCCS.
 	fmt.Println("Hero's combined cards:", heroCombinedCardSet)
 
 	heroCombinedCardSet.FindBestHand()
@@ -91,6 +90,75 @@ func Guess() {
 		heroWins, 100*float64(heroWins)/float64(comboCounter))
 
 	fmt.Println("\nThe strongest possible villain hand is:\n", strongestVillainFlopHand.bestEval)
+	// TODO Break down villain's winning hands by rank and percentages.  Eg:
+	//   4.3% quads
+	//  11.8% full house
+	//  24.2% flush
+
+	fmt.Println("\n================= Turn =================")
+	table.dealTurn()
+	fmt.Printf(table.GetStatus())
+
+	heroCombinedCardSet = heroHCCS.Combine(*table.community.cards)
+	fmt.Println("Hero's combined cards:", heroCombinedCardSet)
+
+	heroCombinedCardSet.FindBestHand()
+	fmt.Println("Hero's best eval is:", heroCombinedCardSet.bestEval)
+
+	// Brute force the villian's hands.
+	deckLength = len(table.deck.cardSet.cards)
+	fmt.Println("\nThere are", deckLength, "cards left in the deck.")
+	comboCounter = 0
+	heroLoses = 0
+	heroTies = 0
+	strongestVillainFlopHand = NewCardSet()
+
+	for i := 0; i < deckLength-1; i++ {
+		for j := i+1; j < deckLength; j++ {
+			comboCounter++
+			//fmt.Printf("%2d: %s %s\n", comboCounter, table.deck.cardSet.cards[i], table.deck.cardSet.cards[j])
+
+			villainCardSet := NewCardSet()
+			villainCardSet.Add(*table.deck.cardSet.cards[i])
+			villainCardSet.Add(*table.deck.cardSet.cards[j])
+			villainCombinedCardSet := villainCardSet.Combine(*table.community.cards)
+			villainCombinedCardSet.FindBestHand()
+
+			// A higher score is better here.
+			if villainCombinedCardSet.bestEval.flattenedScore > heroCombinedCardSet.bestEval.flattenedScore {
+				heroLoses++
+				//fmt.Println("Hero LOSES to Villain:", villainCombinedCardSet.bestEval)
+
+				if strongestVillainFlopHand.isEmpty() {
+					strongestVillainFlopHand = villainCombinedCardSet
+				} else if villainCombinedCardSet.bestEval.flattenedScore > strongestVillainFlopHand.bestEval.flattenedScore {
+					strongestVillainFlopHand = villainCombinedCardSet
+				}
+
+				continue
+			}
+
+			if villainCombinedCardSet.bestEval.flattenedScore == heroCombinedCardSet.bestEval.flattenedScore {
+				heroTies++
+				//fmt.Println("Hero TIES with Villain:", villainCombinedCardSet.bestEval)
+
+				continue
+			}
+
+			//fmt.Println("  hero WINS")
+		}
+	}
+
+	fmt.Println("Just to repeat, Hero's best eval is:", heroCombinedCardSet.bestEval)
+
+	heroWins = comboCounter - heroLoses - heroTies
+	fmt.Printf("Of the %d possibilities,\n %d (%4.1f%%) result in loss for the hero,\n %d (%4.1f%%) result in ties,\n and %d (%4.1f%%) result in wins.",
+		comboCounter, heroLoses, 100*float64(heroLoses)/float64(comboCounter), heroTies, 100*float64(heroTies)/float64(comboCounter),
+		heroWins, 100*float64(heroWins)/float64(comboCounter))
+
+	fmt.Println("\nThe strongest possible villain hand is:\n", strongestVillainFlopHand.bestEval)
+
+	// TODO turn the above into a function that can be called on each street.
 }
 
 /*
