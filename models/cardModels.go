@@ -519,6 +519,46 @@ func (d *Deck) getCard() *Card {
 	return d.cardSet.Pop()
 }
 
+func rankToNumericRank(stringRank string) int {
+	switch stringRank {
+	case "A":
+		return 14  // Aces are aces.
+	case "K":
+		return 13
+	case "Q":
+		return 12
+	case "J":
+		return 11
+	case "T":
+		return 10
+	default:
+		num, _ := strconv.Atoi(stringRank)
+		return num
+	}
+}
+
+// This is in case you want to pull a specific card from the Deck so you
+// can deal it to a player for testing.  The cardValue should be
+// something like C3, HQ, or ST.
+func (d *Deck) getCardOfValue(cardValue string) *Card {
+	// TODO validate cardValue
+
+	suit := string([]rune(cardValue)[0])
+	numericRank := rankToNumericRank(string([]rune(cardValue)[1]))
+
+	requestedCard := NewCard(suit, numericRank)
+	for i, c := range d.cardSet.cards {
+		card := *c
+		if card.IsSuited(requestedCard) && card.IsPaired(requestedCard) {
+			fmt.Println("Found:", requestedCard, "at", i, card)
+			break
+		}
+	}
+
+	//return d.getCard()
+	return &requestedCard
+}
+
 type Community struct {
 	cards *CardSet
 }

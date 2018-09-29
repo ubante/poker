@@ -20,9 +20,8 @@ func Guess() {
 	fmt.Printf(table.GetStatus())
 
 	table.Preset()
-	hero.addHoleCard(*table.deck.getCard())
-	hero.addHoleCard(*table.deck.getCard())
-	//table.DealHoleCards()
+	hero.addHoleCard(*table.deck.getCardOfValue("HQ"))
+	hero.addHoleCard(*table.deck.getCardOfValue("SQ"))
 	fmt.Printf(table.GetStatus())
 
 	fmt.Println("\n================= Flop =================")
