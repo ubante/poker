@@ -216,6 +216,29 @@ func (e Evaluation) String() string {
 	return toString
 }
 
+func decodeEvaluationPrimaryRank(rank int) string {
+	switch rank {
+	case 9:
+		return "straight flush"
+	case 8:
+		return "four of a kind"
+	case 7:
+		return "full house"
+	case 6:
+		return "flush"
+	case 5:
+		return "straight"
+	case 4:
+		return "three of a kind"
+	case 3:
+		return "two pair"
+	case 2:
+		return "one pair"
+	default:
+		return "high card"
+	}
+}
+
 func (e Evaluation) isFlush() bool {
 	var suit string
 	for _, card := range e.cardSet.cards {

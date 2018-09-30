@@ -2,6 +2,7 @@ package models
 
 import (
 	"fmt"
+	"sort"
 )
 
 // This is just to cast a GenericPlayer to Player.
@@ -24,6 +25,7 @@ func compute(table Table, heroHCCS CardSet) {
 	heroLoses := 0
 	heroTies := 0
 	strongestVillainNewStreetHand := NewCardSet()
+	winningVillianHandMap := make(map[int]int)
 
 	for i := 0; i < deckLength-1; i++ {
 		for j := i+1; j < deckLength; j++ {
@@ -47,6 +49,15 @@ func compute(table Table, heroHCCS CardSet) {
 					strongestVillainNewStreetHand = villainCombinedCardSet
 				}
 
+				// See Evaluation() for the full list.  Higher is better
+				// where 9 is a straight flush and 1 is a high card.
+				primaryRank := villainCombinedCardSet.bestEval.primaryRank
+				if _, ok := winningVillianHandMap[primaryRank]; ok {
+					winningVillianHandMap[primaryRank]++
+				} else {
+					winningVillianHandMap[primaryRank] = 1
+				}
+
 				continue
 			}
 
@@ -65,8 +76,24 @@ func compute(table Table, heroHCCS CardSet) {
 
 	heroWins := comboCounter - heroLoses - heroTies
 	fmt.Printf("Of the %d possibilities,\n %d (%4.1f%%) result in loss for the hero,\n %d (%4.1f%%) result in ties,\n and %d (%4.1f%%) result in wins.",
-		comboCounter, heroLoses, 100*float64(heroLoses)/float64(comboCounter), heroTies, 100*float64(heroTies)/float64(comboCounter),
-		heroWins, 100*float64(heroWins)/float64(comboCounter))
+		comboCounter, heroLoses, 100*float64(heroLoses)/float64(comboCounter), heroTies,
+		100*float64(heroTies)/float64(comboCounter), heroWins, 100*float64(heroWins)/float64(comboCounter))
+	//fmt.Println()
+
+	// Break down the hands where the villian wins by hand rank.
+	var sortedRanks []int
+	for rank := range winningVillianHandMap {
+		sortedRanks = append(sortedRanks, rank)
+	}
+	sort.Sort(sort.Reverse(sort.IntSlice(sortedRanks)))
+
+	fmt.Println("\nHere's the breakdown of hands beat the hero's hand:")
+	for _, primaryRank := range sortedRanks {
+		fmt.Printf("%16s: %4.1f%% (%d) \n", decodeEvaluationPrimaryRank(primaryRank),
+			100*float64(winningVillianHandMap[primaryRank])/float64(comboCounter),
+			winningVillianHandMap[primaryRank])
+	}
+
 
 	fmt.Println("\nThe strongest possible villain hand is:\n", strongestVillainNewStreetHand.bestEval)
 }
@@ -110,20 +137,20 @@ func Guess() {
  /*
 Starting to guess....
 =====================
-Adding Hari to the end.
+Adding Hari to the front.
 ------
  -- 2 players left (game #0)
-Victor: [] $0/$1000
 Hari: [] $0/$1000
+Victor: [] $0/$1000
 Pot: 0
-Community:
+Community: 
 Bet totals: 0
 Stack totals: 2000
 ------
 ------
  -- 2 players left (game #1)
+Hari: [ST H3] $0/$1000
 Victor: [] $0/$1000
-Hari: [HQ SQ] $0/$1000
 Pot: 0
 Community:
 Bet totals: 0
@@ -133,69 +160,87 @@ Stack totals: 2000
 ================= Flop =================
 ------
 FLOP -- 2 players left (game #1)
+Hari: [ST H3] $0/$1000
 Victor: [] $0/$1000
-Hari: [HQ SQ] $0/$1000
 Pot: 0
-Community: H4 DJ SK
+Community: S4 C6 CT
 Bet totals: 0
 Stack totals: 2000
 ------
-Hero's combined cards: HQ SQ H4 DJ SK
-Hero's best eval is: HQ SQ H4 DJ SK: pair with ranks: [2 12 13 11 4 0]
+Hero's combined cards: ST H3 S4 C6 CT
+Hero's best eval is: ST H3 S4 C6 CT: pair with ranks: [2 10 6 4 3 0]
 
 There are 47 cards left in the deck.
-Just to repeat, Hero's best eval is: HQ SQ H4 DJ SK: pair with ranks: [2 12 13 11 4 0]
+Just to repeat, Hero's best eval is: ST H3 S4 C6 CT: pair with ranks: [2 10 6 4 3 0]
 Of the 1081 possibilities,
- 156 (14.4%) result in loss for the hero,
- 1 ( 0.1%) result in ties,
- and 924 (85.5%) result in wins.
+ 116 (10.7%) result in loss for the hero,
+ 6 ( 0.6%) result in ties,
+ and 959 (88.7%) result in wins.
+Here's the breakdown of hands beat the hero's hand:
+ three of a kind:  0.6% (7)
+        two pair:  1.9% (21)
+        one pair:  8.1% (88)
+
 The strongest possible villain hand is:
- HK DK H4 DJ SK: three of a kind with ranks: [4 13 11 0 4 0]
+ HT DT S4 C6 CT: three of a kind with ranks: [4 10 6 0 4 0]
 
 ================= Turn =================
 ------
 TURN -- 2 players left (game #1)
+Hari: [ST H3] $0/$1000
 Victor: [] $0/$1000
-Hari: [HQ SQ] $0/$1000
 Pot: 0
-Community: H4 DJ SK CT
+Community: S4 C6 CT D7
 Bet totals: 0
 Stack totals: 2000
 ------
-Hero's combined cards: HQ SQ H4 DJ SK CT
-Hero's best eval is: HQ SQ DJ SK CT: pair with ranks: [2 12 13 11 10 0]
+Hero's combined cards: ST H3 S4 C6 CT D7
+Hero's best eval is: ST S4 C6 CT D7: pair with ranks: [2 10 7 6 4 0]
 
 There are 46 cards left in the deck.
-Just to repeat, Hero's best eval is: HQ SQ DJ SK CT: pair with ranks: [2 12 13 11 10 0]
+Just to repeat, Hero's best eval is: ST S4 C6 CT D7: pair with ranks: [2 10 7 6 4 0]
 Of the 1035 possibilities,
- 190 (18.4%) result in loss for the hero,
- 1 ( 0.1%) result in ties,
- and 844 (81.5%) result in wins.
+ 179 (17.3%) result in loss for the hero,
+ 14 ( 1.4%) result in ties,
+ and 842 (81.4%) result in wins.
+Here's the breakdown of hands beat the hero's hand:
+        straight:  4.3% (44)
+ three of a kind:  1.0% (10)
+        two pair:  4.3% (45)
+        one pair:  7.7% (80)
+
 The strongest possible villain hand is:
- DA CQ DJ SK CT: straight with ranks: [5 14 0 0 0 0]
+ C9 D8 C6 CT D7: straight with ranks: [5 10 0 0 0 0]
 
 ================= River =================
 ------
 RIVER -- 2 players left (game #1)
+Hari: [ST H3] $0/$1000
 Victor: [] $0/$1000
-Hari: [HQ SQ] $0/$1000
 Pot: 0
-Community: H4 DJ SK CT D2
+Community: S4 C6 CT D7 H6
 Bet totals: 0
 Stack totals: 2000
 ------
-Hero's combined cards: HQ SQ H4 DJ SK CT D2
-Hero's best eval is: HQ SQ DJ SK CT: pair with ranks: [2 12 13 11 10 0]
+Hero's combined cards: ST H3 S4 C6 CT D7 H6
+Hero's best eval is: ST C6 CT D7 H6: two pairs with ranks: [3 10 6 7 0 0]
 
 There are 45 cards left in the deck.
-Just to repeat, Hero's best eval is: HQ SQ DJ SK CT: pair with ranks: [2 12 13 11 10 0]
+Just to repeat, Hero's best eval is: ST C6 CT D7 H6: two pairs with ranks: [3 10 6 7 0 0]
 Of the 990 possibilities,
- 217 (21.9%) result in loss for the hero,
- 1 ( 0.1%) result in ties,
- and 772 (78.0%) result in wins.
+ 216 (21.8%) result in loss for the hero,
+ 28 ( 2.8%) result in ties,
+ and 746 (75.4%) result in wins.
+Here's the breakdown of hands beat the hero's hand:
+  four of a kind:  0.1% (1)
+      full house:  2.3% (23)
+        straight:  4.4% (44)
+ three of a kind:  7.1% (70)
+        two pair:  7.9% (78)
+
 The strongest possible villain hand is:
- DA CQ DJ SK CT: straight with ranks: [5 14 0 0 0 0]
+ D6 S6 C6 CT H6: quads with ranks: [8 6 10 0 0 0]
 
 Process finished with exit code 0
 
- */
+  */
