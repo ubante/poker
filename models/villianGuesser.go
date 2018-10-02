@@ -98,7 +98,7 @@ func compute(table Table, heroHCCS CardSet) {
 	fmt.Println("\nThe strongest possible villain hand is:\n", strongestVillainNewStreetHand.bestEval)
 }
 
-func Guess() {
+func VillainGuesser() {
 	var table Table
 	table.Initialize()
 	villain := NewGenericPlayer("Victor")
@@ -134,6 +134,42 @@ func Guess() {
 
 }
 
+func ComputeFlop(heroHandString, communityString string) {
+	var table Table
+	table.Initialize()
+	hero := NewGenericPlayer("Hank")
+	table.AddPlayer(&hero)
+	table.Preset()
+
+	heroCard1 := string([]rune(heroHandString)[0:2])
+	heroCard2 := string([]rune(heroHandString)[2:4])
+	hero.addHoleCard(*table.deck.getCardOfValue(heroCard1))
+	hero.addHoleCard(*table.deck.getCardOfValue(heroCard2))
+	fmt.Println(table.GetStatus())
+
+	flopCard1 := string([]rune(communityString)[0:2])
+	flopCard2 := string([]rune(communityString)[2:4])
+	flopCard3 := string([]rune(communityString)[4:6])
+	table.community.add(*table.deck.getCardOfValue(flopCard1))
+	table.community.add(*table.deck.getCardOfValue(flopCard2))
+	table.community.add(*table.deck.getCardOfValue(flopCard3))
+	fmt.Println(table.GetStatus())
+
+	heroHCCS := hero.getHoleCardsCardSet()
+
+	fmt.Println("\n================= Given Flop =================")
+	compute(table, heroHCCS)
+
+	fmt.Println("\n================= Random Turn =================")
+	table.dealTurn()
+	compute(table, heroHCCS)
+
+	fmt.Println("\n================= Random River =================")
+	table.dealRiver()
+	compute(table, heroHCCS)
+
+}
+
  /*
 Starting to guess....
 =====================
@@ -143,7 +179,7 @@ Adding Hari to the front.
 Hari: [] $0/$1000
 Victor: [] $0/$1000
 Pot: 0
-Community: 
+Community:
 Bet totals: 0
 Stack totals: 2000
 ------

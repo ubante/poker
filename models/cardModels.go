@@ -258,6 +258,8 @@ func (e Evaluation) isStraight() bool {
 	// This needs to handle a wheel straight, ie A2345.
 
 	orderedRanks := e.cardSet.GetReverseOrderedNumericRanks()
+
+
 	previous := 0
 	for _, rank := range orderedRanks {
 		if previous == 0 {
