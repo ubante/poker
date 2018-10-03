@@ -5,6 +5,7 @@ import (
 	"math/rand"
 	"sort"
 	"strconv"
+	"os"
 )
 
 type Card struct {
@@ -589,17 +590,24 @@ func (d *Deck) getCardOfValue(cardValue string) *Card {
 	numericRank := rankToNumericRank(string([]rune(cardValue)[1]))
 
 	requestedCard := NewCard(suit, numericRank)
+	cardNotFound := true
 	for i, c := range d.cardSet.cards {
 		card := *c
 		if card.IsSuited(requestedCard) && card.IsPaired(requestedCard) {
 			//fmt.Println("Found:", requestedCard, "at", i, card)
 			d.cardSet.cards = append(d.cardSet.cards[:i], d.cardSet.cards[i+1:]...)
+			cardNotFound = false
 			break
 		}
 	}
 
-	// Should we check that the above loop found the card?  It is
-	// possible that it has already been dealt.
+	// Check that the above loop found the card.  It is possible that it
+	// has already been dealt.
+	if cardNotFound {
+		fmt.Println("The requested card,", cardValue, "was not found.  Perhaps it was already dealt.")
+		fmt.Println("Exiting.")
+		os.Exit(11)
+	}
 
 	return &requestedCard
 }

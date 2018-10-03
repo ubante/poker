@@ -5,11 +5,6 @@ import (
 	"sort"
 )
 
-// This is just to cast a GenericPlayer to Player.
-//func castToPlayer(player Player) Player {
-//	return player
-//}
-
 func compute(table Table, heroHCCS CardSet) {
 	fmt.Printf(table.GetStatus())
 	heroCombinedCardSet := heroHCCS.Combine(*table.community.cards)
@@ -63,12 +58,9 @@ func compute(table Table, heroHCCS CardSet) {
 
 			if villainCombinedCardSet.bestEval.flattenedScore == heroCombinedCardSet.bestEval.flattenedScore {
 				heroTies++
-				//fmt.Println("Hero TIES with Villain:", villainCombinedCardSet.bestEval)
 
 				continue
 			}
-
-			//fmt.Println("  hero WINS")
 		}
 	}
 
@@ -78,7 +70,6 @@ func compute(table Table, heroHCCS CardSet) {
 	fmt.Printf("Of the %d possibilities,\n %d (%4.1f%%) result in loss for the hero,\n %d (%4.1f%%) result in ties,\n and %d (%4.1f%%) result in wins.",
 		comboCounter, heroLoses, 100*float64(heroLoses)/float64(comboCounter), heroTies,
 		100*float64(heroTies)/float64(comboCounter), heroWins, 100*float64(heroWins)/float64(comboCounter))
-	//fmt.Println()
 
 	// Break down the hands where the villian wins by hand rank.
 	var sortedRanks []int
