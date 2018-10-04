@@ -20,7 +20,7 @@ func compute(table Table, heroHCCS CardSet) {
 	heroLoses := 0
 	heroTies := 0
 	strongestVillainNewStreetHand := NewCardSet()
-	winningVillianHandMap := make(map[int]int)
+	winningVillainHandMap := make(map[int]int)
 
 	for i := 0; i < deckLength-1; i++ {
 		for j := i+1; j < deckLength; j++ {
@@ -47,10 +47,10 @@ func compute(table Table, heroHCCS CardSet) {
 				// See Evaluation() for the full list.  Higher is better
 				// where 9 is a straight flush and 1 is a high card.
 				primaryRank := villainCombinedCardSet.bestEval.primaryRank
-				if _, ok := winningVillianHandMap[primaryRank]; ok {
-					winningVillianHandMap[primaryRank]++
+				if _, ok := winningVillainHandMap[primaryRank]; ok {
+					winningVillainHandMap[primaryRank]++
 				} else {
-					winningVillianHandMap[primaryRank] = 1
+					winningVillainHandMap[primaryRank] = 1
 				}
 
 				continue
@@ -73,7 +73,7 @@ func compute(table Table, heroHCCS CardSet) {
 
 	// Break down the hands where the villian wins by hand rank.
 	var sortedRanks []int
-	for rank := range winningVillianHandMap {
+	for rank := range winningVillainHandMap {
 		sortedRanks = append(sortedRanks, rank)
 	}
 	sort.Sort(sort.Reverse(sort.IntSlice(sortedRanks)))
@@ -81,8 +81,8 @@ func compute(table Table, heroHCCS CardSet) {
 	fmt.Println("\nHere's the breakdown of hands beat the hero's hand:")
 	for _, primaryRank := range sortedRanks {
 		fmt.Printf("%16s: %4.1f%% (%d) \n", decodeEvaluationPrimaryRank(primaryRank),
-			100*float64(winningVillianHandMap[primaryRank])/float64(comboCounter),
-			winningVillianHandMap[primaryRank])
+			100*float64(winningVillainHandMap[primaryRank])/float64(comboCounter),
+			winningVillainHandMap[primaryRank])
 	}
 
 

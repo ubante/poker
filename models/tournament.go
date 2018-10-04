@@ -781,6 +781,8 @@ func RunTournament() map[string]int {
 	table.AddPlayer(&tempSMMP5)
 	tempSMMP6 := NewSklanskyMalmuthModifiedPlayer("Muts", 2)
 	table.AddPlayer(&tempSMMP6)
+	tempOCP1 := NewOddsComputingPlayer("Otis", 2, 50)
+	table.AddPlayer(&tempOCP1)
 	fmt.Print("\n\n")
 
 	// Set an initial small blind value.
@@ -797,8 +799,8 @@ func RunTournament() map[string]int {
 		table.bettingRound = "PREFLOP"
 
 		table.postBlinds()
-		fmt.Println(table.GetStatus())
 		table.DealHoleCards()
+		fmt.Println(table.GetStatus())
 		table.preFlopBet()
 		table.moveBetsToPot()
 		fmt.Println(table.GetStatus())
