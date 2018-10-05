@@ -172,13 +172,31 @@ func (gp *GenericPlayer) fold() {
 // like irrelevant semantics here.
 func (gp *GenericPlayer) raise(raiseAmount int) {
 	if gp.stack < raiseAmount {
-		fmt.Println("Player tried to raise more than its stack.  This is a fatal error.")
-		fmt.Println(gp)
+		fmt.Println(gp.getName(),"tried to raise more than its stack.  This is a fatal error.")
+		fmt.Printf("Stack: $%d, Raise: $%d\n", gp.stack, raiseAmount)
+		//fmt.Println(gp)
 		os.Exit(9)
+	}
+
+	// The below block may be redundant if this method was called from
+	// allIn() but it's best to have it in case raise() is called from
+	// a method that doesn't check if the player is all-in or not.
+	if raiseAmount == gp.stack {
+		gp.isAllIn = true
 	}
 
 	gp.bet += raiseAmount
 	gp.stack -= raiseAmount
+}
+
+// This is the safer alternative to gp.raise().
+func (gp *GenericPlayer) raiseUpTo(raiseAmount int) {
+	if raiseAmount >= gp.stack {
+		gp.allIn()
+		return
+	}
+
+	gp.raise(raiseAmount)
 }
 
 func (gp *GenericPlayer) allIn() {

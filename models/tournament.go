@@ -427,8 +427,24 @@ func (t *Table) postBlinds() (table Table) {
 }
 
 func (t *Table) DealHoleCards() {
+	// This is a hack to give a certain player certain holecards.
+	//for _, p := range t.players {
+	//	player := *p
+	//	if player.getName() == "Otis" {
+	//		player.addHoleCard(*t.deck.getCardOfValue("HA"))
+	//		player.addHoleCard(*t.deck.getCardOfValue("CA"))
+	//		break
+	//	}
+	//}
+
 	for _, p := range t.players {
 		player := *p
+
+		// This is part of the above hack.
+		//if player.getName() == "Otis" {
+		//	continue
+		//}
+
 		player.addHoleCard(*t.deck.getCard())
 		player.addHoleCard(*t.deck.getCard())
 	}
@@ -775,13 +791,18 @@ func RunTournament() map[string]int {
 	table.AddPlayer(&tempMinRaiser)
 	tempSMP1 := NewSklanskyMalmuthPlayer("Saul", 5)
 	table.AddPlayer(&tempSMP1)
-	tempSMP5 := NewSklanskyMalmuthPlayer("Stan", 2)
-	table.AddPlayer(&tempSMP5)
-	tempSMMP5 := NewSklanskyMalmuthModifiedPlayer("Mits", 5)
-	table.AddPlayer(&tempSMMP5)
+	//tempSMP5 := NewSklanskyMalmuthPlayer("Stan", 2)
+	//table.AddPlayer(&tempSMP5)
+	//tempSMMP5 := NewSklanskyMalmuthModifiedPlayer("Mits", 5)
+	//table.AddPlayer(&tempSMMP5)
 	tempSMMP6 := NewSklanskyMalmuthModifiedPlayer("Muts", 2)
 	table.AddPlayer(&tempSMMP6)
-	tempOCP1 := NewOddsComputingPlayer("Otis", 2, 50)
+	//tempOCP1 := NewOddsComputingPlayer("Otis", 2, 50)
+	tempOCP1 := NewOddsComputingPlayer("Otis", 6, 50)
+	tempOCP1.preFlopRaise = 3
+	tempOCP1.postFlopRaise = 0.5
+	tempOCP1.turnRaise = 1.0
+	tempOCP1.riverRaise = 2.0
 	table.AddPlayer(&tempOCP1)
 	fmt.Print("\n\n")
 
@@ -854,6 +875,7 @@ func RunTournament() map[string]int {
 		}
 
 		//time.Sleep(1 * time.Second)
+		//os.Exit(12)
 	}
 
 	fmt.Println()
@@ -883,6 +905,7 @@ func RunTournament() map[string]int {
 	// real tournament, there are tie-breakers used when multiple
 	// players bust in the same game.  For now, I'll just assign ties.
 	sort.Sort(sort.Reverse(sort.IntSlice(sortedGameCtrs)))
+	fmt.Printf("place: 1: %s\n", winner.getName())
 	for _, rev := range sortedGameCtrs {
 		fmt.Printf("place: %d (round %d): ", place+1, rev)
 		for _, bustedPlayer := range table.bustLog[rev] {
