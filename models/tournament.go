@@ -798,7 +798,7 @@ func RunTournament() map[string]int {
 	tempSMMP6 := NewSklanskyMalmuthModifiedPlayer("Muts", 2)
 	table.AddPlayer(&tempSMMP6)
 	//tempOCP1 := NewOddsComputingPlayer("Otis", 2, 50)
-	tempOCP1 := NewOddsComputingPlayer("Otis", 6, 50)
+	tempOCP1 := NewOddsComputingPlayer("Otis", 6, 70)
 	tempOCP1.preFlopRaise = 3
 	tempOCP1.postFlopRaise = 0.5
 	tempOCP1.turnRaise = 1.0

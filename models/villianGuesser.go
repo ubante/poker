@@ -158,7 +158,140 @@ func ComputeFlop(heroHandString, communityString string) {
 	fmt.Println("\n================= Random River =================")
 	table.dealRiver()
 	compute(table, heroHCCS)
+}
 
+func computeNoCheating(table Table, heroHCCS CardSet) {
+	fmt.Println("This time I will not look at the table's deck.  That would be cheating.")
+	fmt.Printf(table.GetStatus())
+	heroCombinedCardSet := heroHCCS.Combine(*table.community.cards)
+	fmt.Println("Hero's combined cards:", heroCombinedCardSet)
+
+	heroCombinedCardSet.FindBestHand()
+	fmt.Println("Hero's best eval is:", heroCombinedCardSet.bestEval)
+
+	// Make a new deck and remove the hero's hole cards and the
+	// post-flop community cards.
+	nonCheatingDeck := NewDeck()  // Note that this deck is not shuffled.
+	//fmt.Println("The non cheating deck is of length:", nonCheatingDeck.length())
+	for _, card := range heroCombinedCardSet.cards {
+		nonCheatingDeck.getCardOfValue(card.ToString())  // This will just remove the card from the deck.
+	}
+	//fmt.Println("The non cheating deck is now of length:", nonCheatingDeck.length())
+
+	//os.Exit(99)
+
+	// Brute force the villian's hands.
+	deckLength := nonCheatingDeck.length()
+	//deckLength := len(table.deck.cardSet.cards)
+	fmt.Println("\nThere are", deckLength, "cards left in the non cheating deck.")
+	comboCounter := 0
+	heroLoses := 0
+	heroTies := 0
+	strongestVillainNewStreetHand := NewCardSet()
+	winningVillainHandMap := make(map[int]int)
+
+	for i := 0; i < deckLength-1; i++ {
+		for j := i+1; j < deckLength; j++ {
+			comboCounter++
+			//fmt.Printf("%2d: %s %s\n", comboCounter, table.deck.cardSet.cards[i], table.deck.cardSet.cards[j])
+
+			villainCardSet := NewCardSet()
+			villainCardSet.Add(*nonCheatingDeck.cardSet.cards[i])
+			villainCardSet.Add(*nonCheatingDeck.cardSet.cards[j])
+			//villainCardSet.Add(*table.deck.cardSet.cards[i])
+			//villainCardSet.Add(*table.deck.cardSet.cards[j])
+			villainCombinedCardSet := villainCardSet.Combine(*table.community.cards)
+			villainCombinedCardSet.FindBestHand()
+
+			// A higher score is better here.
+			if villainCombinedCardSet.bestEval.flattenedScore > heroCombinedCardSet.bestEval.flattenedScore {
+				heroLoses++
+				//fmt.Println("Hero LOSES to Villain:", villainCombinedCardSet.bestEval)
+
+				if strongestVillainNewStreetHand.isEmpty() {
+					strongestVillainNewStreetHand = villainCombinedCardSet
+				} else if villainCombinedCardSet.bestEval.flattenedScore > strongestVillainNewStreetHand.bestEval.flattenedScore {
+					strongestVillainNewStreetHand = villainCombinedCardSet
+				}
+
+				// See Evaluation() for the full list.  Higher is better
+				// where 9 is a straight flush and 1 is a high card.
+				primaryRank := villainCombinedCardSet.bestEval.primaryRank
+				if _, ok := winningVillainHandMap[primaryRank]; ok {
+					winningVillainHandMap[primaryRank]++
+				} else {
+					winningVillainHandMap[primaryRank] = 1
+				}
+
+				continue
+			}
+
+			if villainCombinedCardSet.bestEval.flattenedScore == heroCombinedCardSet.bestEval.flattenedScore {
+				heroTies++
+
+				continue
+			}
+		}
+	}
+
+	fmt.Println("Just to repeat, Hero's best eval is:", heroCombinedCardSet.bestEval)
+
+	heroWins := comboCounter - heroLoses - heroTies
+	fmt.Printf("Of the %d possibilities,\n %d (%4.1f%%) result in loss for the hero,\n %d (%4.1f%%) result in ties,\n and %d (%4.1f%%) result in wins.",
+		comboCounter, heroLoses, 100*float64(heroLoses)/float64(comboCounter), heroTies,
+		100*float64(heroTies)/float64(comboCounter), heroWins, 100*float64(heroWins)/float64(comboCounter))
+
+	// Break down the hands where the villian wins by hand rank.
+	var sortedRanks []int
+	for rank := range winningVillainHandMap {
+		sortedRanks = append(sortedRanks, rank)
+	}
+	sort.Sort(sort.Reverse(sort.IntSlice(sortedRanks)))
+
+	fmt.Println("\nHere's the breakdown of hands beat the hero's hand:")
+	for _, primaryRank := range sortedRanks {
+		fmt.Printf("%16s: %4.1f%% (%d) \n", decodeEvaluationPrimaryRank(primaryRank),
+			100*float64(winningVillainHandMap[primaryRank])/float64(comboCounter),
+			winningVillainHandMap[primaryRank])
+	}
+
+
+	fmt.Println("\nThe strongest possible villain hand is:\n", strongestVillainNewStreetHand.bestEval)
+}
+
+func ComputeFlop2(heroHandString, communityString string) {
+	var table Table
+	table.Initialize()
+	hero := NewGenericPlayer("Hank")
+	table.AddPlayer(&hero)
+	table.Preset()
+
+	heroCard1 := string([]rune(heroHandString)[0:2])
+	heroCard2 := string([]rune(heroHandString)[2:4])
+	hero.addHoleCard(*table.deck.getCardOfValue(heroCard1))
+	hero.addHoleCard(*table.deck.getCardOfValue(heroCard2))
+	fmt.Println(table.GetStatus())
+
+	flopCard1 := string([]rune(communityString)[0:2])
+	flopCard2 := string([]rune(communityString)[2:4])
+	flopCard3 := string([]rune(communityString)[4:6])
+	table.community.add(*table.deck.getCardOfValue(flopCard1))
+	table.community.add(*table.deck.getCardOfValue(flopCard2))
+	table.community.add(*table.deck.getCardOfValue(flopCard3))
+	fmt.Println(table.GetStatus())
+
+	heroHCCS := hero.getHoleCardsCardSet()
+
+	fmt.Println("\n================= Given Flop without cheating =================")
+	computeNoCheating(table, heroHCCS)
+
+	fmt.Println("\n================= Random Turn without cheating =================")
+	table.dealTurn()
+	computeNoCheating(table, heroHCCS)
+
+	fmt.Println("\n================= Random River without cheating =================")
+	table.dealRiver()
+	computeNoCheating(table, heroHCCS)
 }
 
  /*

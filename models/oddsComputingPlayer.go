@@ -46,6 +46,9 @@ func NewOddsComputingPlayer(name string, smLevel int, computedOddsPercentageLeve
 	return *newPlayer
 }
 
+// TODO If this player is the last player, it will still try to bet
+// which is wrong. The tournament class should know this and just
+// finish the hand.
 func (ocp *OddsComputingPlayer) chooseAction(t *Table) {
 	if ocp.hasFolded {
 		fmt.Println("I have already folded so no action.  How did this codepath happen btw?.")
@@ -79,7 +82,6 @@ func (ocp *OddsComputingPlayer) chooseAction(t *Table) {
 			fmt.Println("I have raised up", betDiff, "to", proposedRaise)
 		}
 
-		//time.Sleep(1000 * time.Millisecond)
 		return
 	}
 
@@ -98,6 +100,7 @@ func (ocp *OddsComputingPlayer) chooseAction(t *Table) {
 		os.Exit(22)
 	}
 
+	//fmt.Println("In", t.bettingRound," my odds are", ocp.winningOdds)
 	if ocp.winningOdds > ocp.oddsThreshold {
 		fmt.Printf("There is a %3.2f chance of winning which is greater than the threshold of %3.2f " +
 			"so raising.\n", ocp.winningOdds, ocp.oddsThreshold)
@@ -113,33 +116,11 @@ func (ocp *OddsComputingPlayer) chooseAction(t *Table) {
 		ocp.checkOrFold(t)
 		return
 	}
-
-	//if t.bettingRound == "FLOP" {
-	//	//fmt.Println("Checking the odds for")
-	//	if ocp.winningOdds > ocp.oddsThreshold {
-	//		fmt.Printf("There is a %f chance of winning which is greater than the threshold of %f so raising.\n",
-	//			ocp.winningOdds, ocp.oddsThreshold)
-	//		raiseTarget := float64(t.pot.getValue()) * ocp.postFlopRaise
-	//		raiseTargetInt := int(math.Round(raiseTarget))
-	//		fmt.Printf("The pot is $%d and we have a multiplier of %3.2f so raising up to $%d.\n",
-	//			t.pot.getValue(), ocp.postFlopRaise, raiseTargetInt)
-	//		ocp.raiseUpTo(raiseTargetInt)
-	//		return
-	//	} else {
-	//		fmt.Printf("The odds of winning, %3.2f%%, did not meet the odds threshold of %3.2f%% so just " +
-	//			"checkfolding.\n", ocp.winningOdds, ocp.oddsThreshold)
-	//		ocp.checkOrFold(t)
-	//		return
-	//	}
-	//}
-
-	// Below block is just until I finish the logic to compute the odds.
-	//fmt.Printf("(%s) SM%d: check-calling\n", ocp.getName(), ocp.smThreshold)
-	//ocp.checkOrCall(t)
 }
 
 // This should be a method to avoid namespace collisions.
 func (ocp *OddsComputingPlayer) computeOdds(table Table, heroHCCS CardSet) {
+	fmt.Println("Computing odds....")
 	fmt.Printf(table.GetStatus())
 	heroCombinedCardSet := heroHCCS.Combine(*table.community.cards)
 	fmt.Println("Hero's combined cards:", heroCombinedCardSet)
@@ -148,7 +129,8 @@ func (ocp *OddsComputingPlayer) computeOdds(table Table, heroHCCS CardSet) {
 	fmt.Println("Hero's best eval is:", heroCombinedCardSet.bestEval)
 
 	// Brute force the villian's hands.
-	deckLength := len(table.deck.cardSet.cards)
+	//deckLength := len(table.deck.cardSet.cards)
+	deckLength := table.deck.length()
 	fmt.Println("\nThere are", deckLength, "cards left in the deck.")
 	comboCounter := 0
 	heroLoses := 0
@@ -226,4 +208,6 @@ func (ocp *OddsComputingPlayer) computeOdds(table Table, heroHCCS CardSet) {
 	}
 
 	fmt.Println("\nThe strongest possible villain hand is:\n", strongestVillainNewStreetHand.bestEval)
+	fmt.Println("... done computing odds.")
+
 }

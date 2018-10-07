@@ -24,8 +24,9 @@ there can only be one.
 func main() {
 	startTime := time.Now().Unix()
 	winRecord := make(map[string][]int)
+	numberOfTournaments := 1
 	//numberOfTournaments := 2
-	numberOfTournaments := 49
+	//numberOfTournaments := 49
 	//numberOfTournaments := 1000
 	//numberOfTournaments := 100000  // 100k
 
