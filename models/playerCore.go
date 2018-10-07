@@ -33,6 +33,9 @@ type Player interface {
 
 type GenericPlayer struct {
 	name           string
+	bankRoll	   int
+
+	// The below gets set before each tournament.
 	nextPlayer     *Player
 	previousPlayer *Player
 
@@ -51,7 +54,7 @@ func NewGenericPlayer(name string) GenericPlayer {
 	ecs := NewCardSet()
 	hc := HoleCards{cardSet: &ecs}
 	initialStack := 1000 // dollars
-	newPlayer := GenericPlayer{name, nil, nil, hc, initialStack, 0,
+	newPlayer := GenericPlayer{name, 0,nil, nil, hc, initialStack, 0,
 		false, false}
 	return newPlayer
 }

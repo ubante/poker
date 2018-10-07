@@ -47,8 +47,9 @@ func NewOddsComputingPlayer(name string, smLevel int, computedOddsPercentageLeve
 }
 
 // TODO If this player is the last player, it will still try to bet
-// which is wrong. The tournament class should know this and just
-// finish the hand.
+// which doesn't hurt but is wasteful and could hurt with a future
+// player. The tournament class should know this and just finish the
+// hand.
 func (ocp *OddsComputingPlayer) chooseAction(t *Table) {
 	if ocp.hasFolded {
 		fmt.Println("I have already folded so no action.  How did this codepath happen btw?.")
@@ -100,7 +101,6 @@ func (ocp *OddsComputingPlayer) chooseAction(t *Table) {
 		os.Exit(22)
 	}
 
-	//fmt.Println("In", t.bettingRound," my odds are", ocp.winningOdds)
 	if ocp.winningOdds > ocp.oddsThreshold {
 		fmt.Printf("There is a %3.2f chance of winning which is greater than the threshold of %3.2f " +
 			"so raising.\n", ocp.winningOdds, ocp.oddsThreshold)
@@ -118,7 +118,6 @@ func (ocp *OddsComputingPlayer) chooseAction(t *Table) {
 	}
 }
 
-// This should be a method to avoid namespace collisions.
 func (ocp *OddsComputingPlayer) computeOdds(table Table, heroHCCS CardSet) {
 	fmt.Println("Computing odds....")
 	fmt.Printf(table.GetStatus())
@@ -128,9 +127,17 @@ func (ocp *OddsComputingPlayer) computeOdds(table Table, heroHCCS CardSet) {
 	heroCombinedCardSet.FindBestHand()
 	fmt.Println("Hero's best eval is:", heroCombinedCardSet.bestEval)
 
+	// Make a new deck and remove the hero's hole cards and the
+	// post-flop community cards.
+	nonCheatingDeck := NewDeck()  // Note that this deck is not shuffled.
+	for _, card := range heroCombinedCardSet.cards {
+		// Despite the method name, this will just remove the card from
+		// the deck.
+		nonCheatingDeck.getCardOfValue(card.ToString())
+	}
+
 	// Brute force the villian's hands.
-	//deckLength := len(table.deck.cardSet.cards)
-	deckLength := table.deck.length()
+	deckLength := nonCheatingDeck.length()
 	fmt.Println("\nThere are", deckLength, "cards left in the deck.")
 	comboCounter := 0
 	heroLoses := 0
@@ -138,23 +145,19 @@ func (ocp *OddsComputingPlayer) computeOdds(table Table, heroHCCS CardSet) {
 	strongestVillainNewStreetHand := NewCardSet()
 	winningVillainHandMap := make(map[int]int)
 
-	// TODO This is a serious problem.  We are looking into the deck here.  Instead we should create a new deck
-	// minus the face-up cards.
 	for i := 0; i < deckLength-1; i++ {
 		for j := i+1; j < deckLength; j++ {
 			comboCounter++
-			//fmt.Printf("%2d: %s %s\n", comboCounter, table.deck.cardSet.cards[i], table.deck.cardSet.cards[j])
 
 			villainCardSet := NewCardSet()
-			villainCardSet.Add(*table.deck.cardSet.cards[i])
-			villainCardSet.Add(*table.deck.cardSet.cards[j])
+			villainCardSet.Add(*nonCheatingDeck.cardSet.cards[i])
+			villainCardSet.Add(*nonCheatingDeck.cardSet.cards[j])
 			villainCombinedCardSet := villainCardSet.Combine(*table.community.cards)
 			villainCombinedCardSet.FindBestHand()
 
 			// A higher score is better here.
 			if villainCombinedCardSet.bestEval.flattenedScore > heroCombinedCardSet.bestEval.flattenedScore {
 				heroLoses++
-				//fmt.Println("Hero LOSES to Villain:", villainCombinedCardSet.bestEval)
 
 				if strongestVillainNewStreetHand.isEmpty() {
 					strongestVillainNewStreetHand = villainCombinedCardSet
@@ -190,7 +193,6 @@ func (ocp *OddsComputingPlayer) computeOdds(table Table, heroHCCS CardSet) {
 	fmt.Printf("Of the %d possibilities,\n %d (%4.1f%%) result in loss for the hero,\n %d (%4.1f%%) " +
 		"result in ties,\n and %d (%4.1f%%) result in wins.",
 		comboCounter, heroLoses, 100*float64(heroLoses)/float64(comboCounter), heroTies,
-		//100*float64(heroTies)/float64(comboCounter), heroWins, 100*float64(heroWins)/float64(comboCounter))
 		100*float64(heroTies)/float64(comboCounter), heroWins, ocp.winningOdds)
 
 	// Break down the hands where the villian wins by hand rank.

@@ -767,7 +767,7 @@ func (t *Table) payWinnersForSegment(segmentValue int, players []*Player) {
 	os.Exit(4)
 }
 
-func RunTournament() map[string]int {
+func RunTournament(tournamentNumber int) map[string]int {
 	var table Table
 	table.Initialize()
 
@@ -781,12 +781,12 @@ func RunTournament() map[string]int {
 	table.AddPlayer(&testCTF)
 	temp5 := NewGenericPlayer("Jenn")
 	table.AddPlayer(&temp5)
-	tempStreetFlopper := NewStreetTestPlayer("Flow", "FLOP")
-	table.AddPlayer(&tempStreetFlopper)
+	//tempStreetFlopper := NewStreetTestPlayer("Flow", "FLOP")
+	//table.AddPlayer(&tempStreetFlopper)
 	testStretTurner := NewStreetTestPlayer("Turk", "TURN")
 	table.AddPlayer(&testStretTurner)
-	testStreetRiverer := NewStreetTestPlayer("Rivv", "RIVER")
-	table.AddPlayer(&testStreetRiverer)
+	//testStreetRiverer := NewStreetTestPlayer("Rivv", "RIVER")
+	//table.AddPlayer(&testStreetRiverer)
 	tempMinRaiser := NewMinRaisingPlayer("Ming")
 	table.AddPlayer(&tempMinRaiser)
 	tempSMP1 := NewSklanskyMalmuthPlayer("Saul", 5)
@@ -798,12 +798,23 @@ func RunTournament() map[string]int {
 	tempSMMP6 := NewSklanskyMalmuthModifiedPlayer("Muts", 2)
 	table.AddPlayer(&tempSMMP6)
 	//tempOCP1 := NewOddsComputingPlayer("Otis", 2, 50)
-	tempOCP1 := NewOddsComputingPlayer("Otis", 6, 70)
+	tempOCP1 := NewOddsComputingPlayer("Odom", 5, 80)
 	tempOCP1.preFlopRaise = 3
 	tempOCP1.postFlopRaise = 0.5
 	tempOCP1.turnRaise = 1.0
 	tempOCP1.riverRaise = 2.0
 	table.AddPlayer(&tempOCP1)
+	//tempOCP2 := NewOddsComputingPlayer("Otis", 6, 70)
+	//tempOCP2.preFlopRaise = 3
+	//tempOCP2.postFlopRaise = 0.5
+	//tempOCP2.turnRaise = 1.0
+	//tempOCP2.riverRaise = 2.0
+	tempOCP3 := NewOddsComputingPlayer("Omar", 2, 70)
+	tempOCP3.preFlopRaise = 3
+	tempOCP3.postFlopRaise = 0.5
+	tempOCP3.turnRaise = 1.0
+	tempOCP3.riverRaise = 2.0
+	table.AddPlayer(&tempOCP3)
 	fmt.Print("\n\n")
 
 	// Set an initial small blind value.
@@ -815,7 +826,8 @@ func RunTournament() map[string]int {
 	for {
 		fmt.Println("============================")
 		table.Preset()
-		fmt.Printf("This is game #%d.\n", table.gameCtr)
+		fmt.Printf("This is game #%d of tournament #%d.\n", table.gameCtr, tournamentNumber)
+		tournamentGameString := fmt.Sprintf("{T%d|G%d}", tournamentNumber, table.gameCtr)
 		table.assignInitialButtonAndBlinds()
 		table.bettingRound = "PREFLOP"
 
@@ -826,25 +838,22 @@ func RunTournament() map[string]int {
 		table.moveBetsToPot()
 		fmt.Println(table.GetStatus())
 
-		//fmt.Println("exiting after one iteration to troubleshoot the different singletons")
-		//os.Exit(6)
-
 		table.bettingRound = "FLOP"
-		fmt.Println("---------------------- Dealing the flop.")
+		fmt.Println("---------------------- Dealing the flop", tournamentGameString)
 		table.DealFlop()
 		table.postPreFlopBet()
 		table.moveBetsToPot()
 		fmt.Println(table.GetStatus())
 
 		table.bettingRound = "TURN"
-		fmt.Println("---------------------- Dealing the turn.")
+		fmt.Println("---------------------- Dealing the turn", tournamentGameString)
 		table.dealTurn()
 		table.postPreFlopBet()
 		table.moveBetsToPot()
 		fmt.Println(table.GetStatus())
 
 		table.bettingRound = "RIVER"
-		fmt.Println("---------------------- Dealing the river.")
+		fmt.Println("---------------------- Dealing the river", tournamentGameString)
 		table.dealRiver()
 
 		table.postPreFlopBet()
