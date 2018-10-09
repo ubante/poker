@@ -43,8 +43,16 @@ func NewOddsComputingPlayer(name string, smLevel int, computedOddsPercentageLeve
 	newPlayer.smThreshold = smLevel
 	newPlayer.oddsThreshold = computedOddsPercentageLevel
 
+	// These should be overwritten by the caller.
+	newPlayer.preFlopRaise = -1
+	newPlayer.postFlopRaise = -1
+	newPlayer.turnRaise = -1
+	newPlayer.riverRaise = -1
+
 	return *newPlayer
 }
+
+// TODO need a better toString() so we can see all the raising fields.
 
 // TODO If this player is the last player, it will still try to bet
 // which doesn't hurt but is wasteful and could hurt with a future
@@ -55,6 +63,13 @@ func (ocp *OddsComputingPlayer) chooseAction(t *Table) {
 		fmt.Println("I have already folded so no action.  How did this codepath happen btw?.")
 		os.Exit(110)
 		return
+	}
+
+	// Make sure that some fields are set.  This should be done soon
+	// after the player object is instantiated.
+	if ocp.preFlopRaise == -1 {
+		fmt.Printf("FATAL: %s does not have all its ___Raise fields properly set.", ocp.name)
+		os.Exit(4)
 	}
 
 	if t.bettingRound == "PREFLOP" {
@@ -111,8 +126,8 @@ func (ocp *OddsComputingPlayer) chooseAction(t *Table) {
 		ocp.raiseUpTo(raiseTargetInt)
 		return
 	} else {
-		fmt.Printf("The odds of winning, %3.2f%%, did not meet the odds threshold of %3.2f%% so just " +
-			"checkfolding.\n", ocp.winningOdds, ocp.oddsThreshold)
+		fmt.Printf("The odds of %s winning, %3.2f%%, did not meet the odds threshold of %3.2f%% so just " +
+			"checkfolding.\n", ocp.name, ocp.winningOdds, ocp.oddsThreshold)
 		ocp.checkOrFold(t)
 		return
 	}

@@ -815,6 +815,13 @@ func RunTournament(tournamentNumber int) map[string]int {
 	tempOCP3.turnRaise = 1.0
 	tempOCP3.riverRaise = 2.0
 	table.AddPlayer(&tempOCP3)
+	tempVOP1 := NewVariableOddsPlayer("Vern", 4, 70)
+	tempVOP1.preFlopRaise = 3
+	tempVOP1.postFlopRaise = 0.5
+	tempVOP1.turnRaise = 1.0
+	tempVOP1.riverRaise = 2.0
+	table.AddPlayer(&tempVOP1)
+
 	fmt.Print("\n\n")
 
 	// Set an initial small blind value.
