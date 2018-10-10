@@ -481,6 +481,16 @@ func (t *Table) getPlayerAction(playerPtr *Player) {
 	}
 
 	fmt.Println(player.getName(), "has action - finding it.")
+
+
+	// This is a test block
+	//if player.getStack() < 100 && player.getName() == "Bill" {
+	//	fmt.Printf("%s is low on funds, sleeping.\n", player.getName())
+	//	time.Sleep(10000*time.Millisecond)
+	//}
+
+
+
 	player.chooseAction(t)
 
 	return
@@ -821,6 +831,8 @@ func RunTournament(tournamentNumber int) map[string]int {
 	tempVOP1.turnRaise = 1.0
 	tempVOP1.riverRaise = 2.0
 	table.AddPlayer(&tempVOP1)
+	tempBP1 := NewBroadwayPlayer("Bill", 10)
+	table.AddPlayer(&tempBP1)
 
 	fmt.Print("\n\n")
 

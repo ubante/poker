@@ -24,10 +24,10 @@ there can only be one.
 func main() {
 	startTime := time.Now().Unix()
 	winRecord := make(map[string][]int)
-	numberOfTournaments := 1
+	//numberOfTournaments := 1
 	//numberOfTournaments := 2
 	//numberOfTournaments := 10
-	//numberOfTournaments := 100
+	numberOfTournaments := 100
 	//numberOfTournaments := 1000
 	//numberOfTournaments := 100000  // 100k
 
@@ -93,6 +93,7 @@ MinRaisingPlayer: Ming
 SklanskyMalmuthPlayer: Stan (5), Saul (1)
 SklanskyMalmultModifiedPlayer: Mits (5), Muts (1)
 OddsComputingPlayer: Odom (5,80), Otis (6,70), Omar (2,70)
+BroadwayPlayer: Bill (10)
 =============================================================
 2018-10-07 02:19:28.1664666 -0700 PDT m=+3268.024353701
 After 3268 seconds and 1000 tournaments, this is the standing record (lower is better):
