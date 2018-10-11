@@ -3,6 +3,7 @@ package models
 import (
 	"fmt"
 	"os"
+	"sort"
 )
 
 // This is most-likely an anti-pattern.
@@ -45,6 +46,7 @@ type GenericPlayer struct {
 	bet       int
 	hasFolded bool
 	isAllIn   bool
+	winningOdds	float64 // Computed odds of having the best hand if evaluated right now
 }
 
 // GenericPlayer constructor
@@ -55,7 +57,7 @@ func NewGenericPlayer(name string) GenericPlayer {
 	hc := HoleCards{cardSet: &ecs}
 	initialStack := 1000 // dollars
 	newPlayer := GenericPlayer{name, 0,nil, nil, hc, initialStack, 0,
-		false, false}
+		false, false, 0.0}
 	return newPlayer
 }
 
@@ -291,5 +293,98 @@ func (gp *GenericPlayer) checkIsAllIn() bool {
 	return gp.isAllIn
 }
 
-// These are future players.
+func (gp *GenericPlayer) computePresentOdds(table Table, heroHCCS CardSet) {
+	fmt.Println("Computing odds....")
+	fmt.Printf(table.GetStatus())
+	heroCombinedCardSet := heroHCCS.Combine(*table.community.cards)
+	fmt.Println("Hero's combined cards:", heroCombinedCardSet)
 
+	heroCombinedCardSet.FindBestHand()
+	fmt.Println("Hero's best eval is:", heroCombinedCardSet.bestEval)
+
+	// Make a new deck and remove the hero's hole cards and the
+	// post-flop community cards.
+	nonCheatingDeck := NewDeck()  // Note that this deck is not shuffled.
+	for _, card := range heroCombinedCardSet.cards {
+		// Despite the method name, this will just remove the card from
+		// the deck.
+		nonCheatingDeck.getCardOfValue(card.ToString())
+	}
+
+	// Brute force the villian's hands.
+	deckLength := nonCheatingDeck.length()
+	fmt.Println("\nThere are", deckLength, "cards left in the deck.")
+	comboCounter := 0
+	heroLoses := 0
+	heroTies := 0
+	strongestVillainNewStreetHand := NewCardSet()
+	winningVillainHandMap := make(map[int]int)
+
+	for i := 0; i < deckLength-1; i++ {
+		for j := i+1; j < deckLength; j++ {
+			comboCounter++
+
+			villainCardSet := NewCardSet()
+			villainCardSet.Add(*nonCheatingDeck.cardSet.cards[i])
+			villainCardSet.Add(*nonCheatingDeck.cardSet.cards[j])
+			villainCombinedCardSet := villainCardSet.Combine(*table.community.cards)
+			villainCombinedCardSet.FindBestHand()
+
+			// A higher score is better here.
+			if villainCombinedCardSet.bestEval.flattenedScore > heroCombinedCardSet.bestEval.flattenedScore {
+				heroLoses++
+
+				if strongestVillainNewStreetHand.isEmpty() {
+					strongestVillainNewStreetHand = villainCombinedCardSet
+				} else if villainCombinedCardSet.bestEval.flattenedScore > strongestVillainNewStreetHand.bestEval.flattenedScore {
+					strongestVillainNewStreetHand = villainCombinedCardSet
+				}
+
+				// See Evaluation() for the full list.  Higher is better
+				// where 9 is a straight flush and 1 is a high card.
+				primaryRank := villainCombinedCardSet.bestEval.primaryRank
+				if _, ok := winningVillainHandMap[primaryRank]; ok {
+					winningVillainHandMap[primaryRank]++
+				} else {
+					winningVillainHandMap[primaryRank] = 1
+				}
+
+				continue
+			}
+
+			if villainCombinedCardSet.bestEval.flattenedScore == heroCombinedCardSet.bestEval.flattenedScore {
+				heroTies++
+
+				continue
+			}
+		}
+	}
+
+	fmt.Println("Just to repeat, Hero's best eval is:", heroCombinedCardSet.bestEval)
+
+	heroWins := comboCounter - heroLoses - heroTies
+	gp.winningOdds = 100*float64(heroWins)/float64(comboCounter)
+
+	fmt.Printf("Of the %d possibilities,\n %d (%4.1f%%) result in loss for the hero,\n %d (%4.1f%%) " +
+		"result in ties,\n and %d (%4.1f%%) result in wins.",
+		comboCounter, heroLoses, 100*float64(heroLoses)/float64(comboCounter), heroTies,
+		100*float64(heroTies)/float64(comboCounter), heroWins, gp.winningOdds)
+
+	// Break down the hands where the villian wins by hand rank.
+	var sortedRanks []int
+	for rank := range winningVillainHandMap {
+		sortedRanks = append(sortedRanks, rank)
+	}
+	sort.Sort(sort.Reverse(sort.IntSlice(sortedRanks)))
+
+	fmt.Println("\nHere's the breakdown of hands beat the hero's hand:")
+	for _, primaryRank := range sortedRanks {
+		fmt.Printf("%16s: %4.1f%% (%d) \n", decodeEvaluationPrimaryRank(primaryRank),
+			100*float64(winningVillainHandMap[primaryRank])/float64(comboCounter),
+			winningVillainHandMap[primaryRank])
+	}
+
+	fmt.Println("\nThe strongest possible villain hand is:\n", strongestVillainNewStreetHand.bestEval)
+	fmt.Println("... done computing odds.")
+
+}
