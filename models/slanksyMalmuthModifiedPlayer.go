@@ -24,6 +24,7 @@ func NewSklanskyMalmuthModifiedPlayer(name string, level int) SlanksyMalmuthModi
 	newPlayer.holeCards = hc
 	newPlayer.stack = initialStack
 	newPlayer.threshold = level
+	newPlayer.typeName = "SklanskyMalmuthModifiedPlayer"
 
 	return *newPlayer
 }

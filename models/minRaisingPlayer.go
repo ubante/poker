@@ -16,6 +16,7 @@ func NewMinRaisingPlayer(name string) MinRaisingPlayer {
 	newPlayer.name = name
 	newPlayer.holeCards = hc
 	newPlayer.stack = initialStack
+	newPlayer.typeName = "MinRaisingPlayer"
 
 	return *newPlayer
 }

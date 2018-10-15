@@ -18,6 +18,7 @@ func NewStreetTestPlayer(name string, street string) StreetTestPlayer {
 	newPlayer.holeCards = hc
 	newPlayer.stack = initialStack
 	newPlayer.foldingStreet = street
+	newPlayer.typeName = "StreetTestPlayer"
 
 	return *newPlayer
 }

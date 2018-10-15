@@ -17,6 +17,7 @@ func NewCallingStationPlayer(name string) CallingStationPlayer {
 	newPlayer.name = name
 	newPlayer.holeCards = hc
 	newPlayer.stack = initialStack
+	newPlayer.typeName = "CallingStationPlayer"
 
 	return *newPlayer
 }

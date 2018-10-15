@@ -24,6 +24,7 @@ func NewBroadwayPlayer(name string, preFlopBet int) BroadwayPlayer {
 	newPlayer.holeCards = hc
 	newPlayer.stack = initialStack
 	newPlayer.preFlopBetMultiplier = preFlopBet
+	newPlayer.typeName = "BroadwayPlayer"
 
 	return *newPlayer
 }

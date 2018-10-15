@@ -9,26 +9,27 @@ import (
 // This player will go all-in if their hold cards are at a certain
 // Sklansky-Malmuth score.
 // https://en.wikipedia.org/wiki/Texas_hold_%27em_starting_hands#Sklansky_hand_groups
-type SlanksyMalmuthPlayer struct {
+type SklanskyMalmuthPlayer struct {
 	GenericPlayer
 	threshold int  // Lesser values are better.
 }
 
-func NewSklanskyMalmuthPlayer(name string, level int) SlanksyMalmuthPlayer {
+func NewSklanskyMalmuthPlayer(name string, level int) SklanskyMalmuthPlayer {
 	ecs := NewCardSet()
 	hc := HoleCards{cardSet: &ecs}
 	initialStack := 1000 // dollars
 
-	newPlayer := new(SlanksyMalmuthPlayer)
+	newPlayer := new(SklanskyMalmuthPlayer)
 	newPlayer.name = name
 	newPlayer.holeCards = hc
 	newPlayer.stack = initialStack
 	newPlayer.threshold = level
+	newPlayer.typeName = "SklanskyMalmuthPlayer"
 
 	return *newPlayer
 }
 
-func (smp *SlanksyMalmuthPlayer) chooseAction(t *Table) {
+func (smp *SklanskyMalmuthPlayer) chooseAction(t *Table) {
 	if smp.hasFolded {
 		fmt.Println("I have already folded so no action.  How did this codepath happen btw?.")
 		os.Exit(4)

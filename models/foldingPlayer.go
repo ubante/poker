@@ -19,6 +19,7 @@ func NewFoldingPlayer(name string) FoldingPlayer {
 	newPlayer.name = name
 	newPlayer.holeCards = hc
 	newPlayer.stack = initialStack
+	newPlayer.typeName = "FoldingPlayer"
 
 	return *newPlayer
 }

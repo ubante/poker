@@ -41,6 +41,7 @@ func NewOddsComputingPlayer(name string, smLevel int, computedOddsPercentageLeve
 	newPlayer.stack = initialStack
 	newPlayer.smThreshold = smLevel
 	newPlayer.oddsThreshold = computedOddsPercentageLevel
+	newPlayer.typeName = "OddsComputingPlayer"
 
 	// These should be overwritten by the caller.
 	newPlayer.preFlopRaise = -1

@@ -17,6 +17,7 @@ func NewCallToFivePlayer(name string) CallToFivePlayer {
 	newPlayer.name = name
 	newPlayer.holeCards = hc
 	newPlayer.stack = initialStack
+	newPlayer.typeName = "CallToFivePlayer"
 
 	return *newPlayer
 }
