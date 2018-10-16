@@ -330,6 +330,10 @@ func (t *Table) AddPlayer(player Player) {
 	return
 }
 
+func (t *Table) AddPlayerWithHistory(player Player) {
+	// Do nothing until we get prove some test cases first in historyTester.
+}
+
 func (t Table) printPlayerList() {
 	if len(t.players) == 1 {
 		lonePlayer := *t.players[0]

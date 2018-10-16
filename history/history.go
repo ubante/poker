@@ -18,12 +18,19 @@ import (
 
 type History struct {
 	filename string
+	alreadyReadFile bool
 }
 
 var singleton *History
 var once sync.Once
 
-func (s *History) readInFile() {
+// We'll read the history file in lazily because it will eventually
+// get big.
+func (s *History) ReadInFile() {
+	if s.alreadyReadFile {
+		return
+	}
+
 	fmt.Println("Oh snap; reading in:", s.filename)
 	file, err := os.Open(s.filename)
 	if err != nil {
@@ -37,16 +44,37 @@ func (s *History) readInFile() {
 	for scanner.Scan() {
 		lines = append(lines, scanner.Text())
 	}
+	s.alreadyReadFile = true
 
 	// Do something here.
 	// Start by just writing to the file.
+}
+
+func (s History) String() string {
+	returnedString := fmt.Sprintf("The history file is at %s", s.filename)
+
+	if s.alreadyReadFile {
+		returnedString += fmt.Sprintf(" and it has already been read.")
+	} else {
+		returnedString += fmt.Sprintf(" and it has not yet been read.")
+	}
+
+	return returnedString
+}
+
+func (s History) ToString() string {
+	return s.String()
+}
+
+func (s *History) SetFilename(newFilename string) {
+	s.filename = newFilename
 }
 
 func GetHistory() *History {
 	once.Do(func() {
 		singleton = &History{}
 		singleton.filename = "poker/history/history.txt"
-		singleton.readInFile()
+		singleton.alreadyReadFile = false
 	})
 	return singleton
 }
