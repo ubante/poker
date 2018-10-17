@@ -7,6 +7,16 @@ import (
 )
 
 // Just a stub to test the history.
+//
+// The history file will be CSV format with these fields:
+// datetime,entry_type,KVP
+//
+// datetime: epoch time to seconds
+// entry_type: supported are (tournament)
+// KVP: key value pairs separated by semicolons
+//
+// Examples:
+
 // TODO learn how to do unit tests in golang
 
 func main() {
@@ -37,6 +47,9 @@ func main() {
 	table.AddPlayerWithHistory(&temp)
 
 	fmt.Println(table.GetStatus())
+
+	allHistory.Write("tournament", "start=x;stop=y")
+
 
 
 

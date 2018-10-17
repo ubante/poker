@@ -5,6 +5,7 @@ import (
 	"os"
 	"fmt"
 	"bufio"
+	"time"
 )
 
 // This is a singleton that will lazily read the history.txt file.  That
@@ -26,34 +27,62 @@ var once sync.Once
 
 // We'll read the history file in lazily because it will eventually
 // get big.
-func (s *History) ReadInFile() {
-	if s.alreadyReadFile {
+func (h *History) ReadInFile() {
+	if h.alreadyReadFile {
 		return
 	}
 
-	fmt.Println("Oh snap; reading in:", s.filename)
-	file, err := os.Open(s.filename)
+	fmt.Println("Oh snap; reading in:", h.filename)
+	f, err := os.Open(h.filename)
 	if err != nil {
-		fmt.Println("Error opening file:", s.filename)
+		fmt.Println("Error opening hFile:", h.filename)
 		os.Exit(1)
 	}
-	defer file.Close()
+	defer f.Close()
 
 	var lines []string
-	scanner := bufio.NewScanner(file)
+	scanner := bufio.NewScanner(f)
 	for scanner.Scan() {
 		lines = append(lines, scanner.Text())
 	}
-	s.alreadyReadFile = true
+	h.alreadyReadFile = true
 
 	// Do something here.
-	// Start by just writing to the file.
+	// Start by just writing to the hFile.
 }
 
-func (s History) String() string {
-	returnedString := fmt.Sprintf("The history file is at %s", s.filename)
+func (h *History) Write(entryType string, kvps string) {
+	// First check that we have a valid file handle.
+	//if ! h.alreadyReadFile {
+	//	h.ReadInFile()
+	//}
 
-	if s.alreadyReadFile {
+	now := int32(time.Now().Unix())
+	entryLine := fmt.Sprintf("%d,%s,%s\n", now, entryType, kvps)
+	fmt.Printf("Writing to file: %s", entryLine)
+
+	// For now, just append to the file.
+	// TODO batch writes
+
+	f, err := os.OpenFile(h.filename, os.O_APPEND|os.O_WRONLY, 0600)
+	if err != nil {
+		fmt.Println("FATAL: Could not open file.")
+		panic(err)
+	}
+
+	// https://stackoverflow.com/questions/7151261/append-to-a-file-in-go
+	_, err = f.WriteString(entryLine)
+	if err != nil {
+		fmt.Println("FATAL: Could not write to history file.")
+		panic(err)
+	}
+
+}
+
+func (h History) String() string {
+	returnedString := fmt.Sprintf("The history file is at %h", h.filename)
+
+	if h.alreadyReadFile {
 		returnedString += fmt.Sprintf(" and it has already been read.")
 	} else {
 		returnedString += fmt.Sprintf(" and it has not yet been read.")
@@ -62,12 +91,12 @@ func (s History) String() string {
 	return returnedString
 }
 
-func (s History) ToString() string {
-	return s.String()
+func (h History) ToString() string {
+	return h.String()
 }
 
-func (s *History) SetFilename(newFilename string) {
-	s.filename = newFilename
+func (h *History) SetFilename(newFilename string) {
+	h.filename = newFilename
 }
 
 func GetHistory() *History {
