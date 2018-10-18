@@ -8,6 +8,7 @@ import (
 	"sort"
 	"time"
 	//"goven/poker/models"
+	"goven/poker/history"
 )
 
 /*
@@ -782,6 +783,11 @@ func (t *Table) payWinnersForSegment(segmentValue int, players []*Player) {
 }
 
 func RunTournament(tournamentNumber int) map[string]int {
+	// Make a tournament id, tid, for the history.
+	tid := history.GetUniqueId()
+	history := history.GetHistory()
+	history.Write("tournament", fmt.Sprintf("name=%s;state=starting", tid))
+
 	var table Table
 	table.Initialize()
 
@@ -948,6 +954,9 @@ func RunTournament(tournamentNumber int) map[string]int {
 		}
 		fmt.Println()
 	}
+
+	// Add the end of the tournament to history.
+	history.Write("tournament", fmt.Sprintf("name=%s;state=ending", tid))
 
 	return placings
 }
