@@ -49,6 +49,8 @@ func main() {
 	fmt.Println(table.GetStatus())
 
 	allHistory.Write("tournament", "start=x;stop=y")
+	tid := history.GetUniqueId()
+	allHistory.Write("tournament", fmt.Sprintf("name=%s;state=starting", tid))
 
 
 

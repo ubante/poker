@@ -6,6 +6,9 @@ import (
 	"fmt"
 	"bufio"
 	"time"
+
+	"github.com/sony/sonyflake"
+	"log"
 )
 
 // This is a singleton that will lazily read the history.txt file.  That
@@ -106,4 +109,18 @@ func GetHistory() *History {
 		singleton.alreadyReadFile = false
 	})
 	return singleton
+}
+
+// https://blog.kowalczyk.info/article/JyRZ/generating-good-unique-ids-in-go.html
+func GetUniqueId() string {
+	flake := sonyflake.NewSonyflake(sonyflake.Settings{})
+
+	// Note: id is base16, could shorten by encoding as base62 string
+	id, err := flake.NextID()
+	if err != nil {
+		log.Fatalf("flake.NextID() failed with %s\n", err)
+	}
+	stringifiedId := fmt.Sprintf("tid%x", id)
+
+	return stringifiedId
 }
