@@ -944,11 +944,15 @@ func RunTournament(tournamentNumber int) map[string]int {
 	// players bust in the same game.  For now, I'll just assign ties.
 	sort.Sort(sort.Reverse(sort.IntSlice(sortedGameCtrs)))
 	fmt.Printf("place: 1: %s\n", winner.getName())
+	history.Write("tournament", fmt.Sprintf("name=%s;winner=%s", tid, winner.getName()))
+	history.Write("tournament", fmt.Sprintf("name=%s;place1=%s", tid, winner.getName()))
 	for _, rev := range sortedGameCtrs {
 		fmt.Printf("place: %d (round %d): ", place+1, rev)
 		for _, bustedPlayer := range table.bustLog[rev] {
 			bpp := *bustedPlayer
 			fmt.Printf("%s, ", bpp.getName())
+			history.Write("tournament", fmt.Sprintf("name=%s;roundBusted=%d;place%d=%s",
+				tid, rev,place+1, bpp.getName()))
 			place++
 			placings[bpp.getName()] = place
 		}
