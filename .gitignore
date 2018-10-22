@@ -10,3 +10,9 @@
 
 # Output of the go coverage tool, specifically when used with LiteIDE
 *.out
+
+# This file can get huuuge
+poker/history/history.txt
+
+# I normally put this in my global gitignore but this is more explicit
+.idea/
