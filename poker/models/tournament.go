@@ -784,8 +784,8 @@ func (t *Table) payWinnersForSegment(segmentValue int, players []*Player) {
 func RunTournament(tournamentNumber int) map[string]int {
 	// Make a tournament id, tid, for the history.
 	tid := history.GetUniqueId()
-	history := history.GetHistory()
-	history.Write("tournament", fmt.Sprintf("name=%s;state=starting", tid))
+	h := history.GetHistory()
+	h.Write("tournament", fmt.Sprintf("name=%s;state=starting", tid))
 
 	var table Table
 	table.Initialize()
@@ -802,8 +802,8 @@ func RunTournament(tournamentNumber int) map[string]int {
 	table.AddPlayer(&temp5)
 	//tempStreetFlopper := NewStreetTestPlayer("Flow", "FLOP")
 	//table.AddPlayer(&tempStreetFlopper)
-	//testStretTurner := NewStreetTestPlayer("Turk", "TURN")
-	//table.AddPlayer(&testStretTurner)
+	//testStreetTurner := NewStreetTestPlayer("Turk", "TURN")
+	//table.AddPlayer(&testStreetTurner)
 	//testStreetRiverer := NewStreetTestPlayer("Rivv", "RIVER")
 	//table.AddPlayer(&testStreetRiverer)
 	//tempMinRaiser := NewMinRaisingPlayer("Ming")
@@ -943,14 +943,14 @@ func RunTournament(tournamentNumber int) map[string]int {
 	// players bust in the same game.  For now, I'll just assign ties.
 	sort.Sort(sort.Reverse(sort.IntSlice(sortedGameCtrs)))
 	fmt.Printf("place: 1: %s\n", winner.getName())
-	history.Write("tournament", fmt.Sprintf("name=%s;winner=%s", tid, winner.getName()))
-	history.Write("tournament", fmt.Sprintf("name=%s;place1=%s", tid, winner.getName()))
+	h.Write("tournament", fmt.Sprintf("name=%s;winner=%s", tid, winner.getName()))
+	h.Write("tournament", fmt.Sprintf("name=%s;place1=%s", tid, winner.getName()))
 	for _, rev := range sortedGameCtrs {
 		fmt.Printf("place: %d (round %d): ", place+1, rev)
 		for _, bustedPlayer := range table.bustLog[rev] {
 			bpp := *bustedPlayer
 			fmt.Printf("%s, ", bpp.getName())
-			history.Write("tournament", fmt.Sprintf("name=%s;roundBusted=%d;place%d=%s",
+			h.Write("tournament", fmt.Sprintf("name=%s;roundBusted=%d;place%d=%s",
 				tid, rev,place+1, bpp.getName()))
 			place++
 			placings[bpp.getName()] = place
@@ -959,7 +959,7 @@ func RunTournament(tournamentNumber int) map[string]int {
 	}
 
 	// Add the end of the tournament to history.
-	history.Write("tournament", fmt.Sprintf("name=%s;state=ending", tid))
+	h.Write("tournament", fmt.Sprintf("name=%s;state=ending", tid))
 
 	return placings
 }
