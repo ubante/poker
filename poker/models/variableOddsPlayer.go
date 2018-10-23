@@ -1,7 +1,7 @@
 package models
 
 import (
-	"goven/poker/matrix"
+	"poker/poker/matrix"
 	"fmt"
 )
 

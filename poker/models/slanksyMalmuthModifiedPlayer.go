@@ -3,7 +3,7 @@ package models
 import (
 	"fmt"
 	"os"
-	"goven/poker/matrix"
+	"poker/poker/matrix"
 )
 
 // This player will go all-in if their hold cards are at a certain

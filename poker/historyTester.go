@@ -2,8 +2,8 @@ package main
 
 import (
 	"fmt"
-	"goven/poker/models"
-	"goven/poker/history"
+	"poker/poker/models"
+	"poker/poker/history"
 )
 
 // Just a stub to test the history.

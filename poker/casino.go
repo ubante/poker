@@ -2,7 +2,7 @@ package main
 
 import (
 	"fmt"
-	"goven/poker/models"
+	"poker/poker/models"
 	"time"
 	"sort"
 )

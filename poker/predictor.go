@@ -1,7 +1,7 @@
 package main
 
 import (
-	"goven/poker/models"
+	"poker/poker/models"
 	"fmt"
 )
 

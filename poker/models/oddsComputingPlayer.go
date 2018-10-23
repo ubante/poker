@@ -3,7 +3,7 @@ package models
 import (
 	"fmt"
 	"os"
-	"goven/poker/matrix"
+	"poker/poker/matrix"
 	"math"
 )
 
