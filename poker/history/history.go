@@ -51,15 +51,9 @@ func (h *History) ReadInFile() {
 	h.alreadyReadFile = true
 
 	// Do something here.
-	// Start by just writing to the hFile.
 }
 
 func (h *History) Write(entryType string, kvps string) {
-	// First check that we have a valid file handle.
-	//if ! h.alreadyReadFile {
-	//	h.ReadInFile()
-	//}
-
 	now := int32(time.Now().Unix())
 	entryLine := fmt.Sprintf("%d,%s,%s\n", now, entryType, kvps)
 	fmt.Printf("Writing to file: %s", entryLine)
@@ -69,6 +63,7 @@ func (h *History) Write(entryType string, kvps string) {
 
 	f, err := os.OpenFile(h.filename, os.O_APPEND|os.O_WRONLY, 0600)
 	if err != nil {
+		// Maybe this should try to create the file?
 		fmt.Println("FATAL: Could not open file.")
 		panic(err)
 	}
@@ -105,7 +100,7 @@ func (h *History) SetFilename(newFilename string) {
 func GetHistory() *History {
 	once.Do(func() {
 		singleton = &History{}
-		singleton.filename = "poker/history/history.txt"
+		singleton.filename = "poker/history/historyFile.txt"
 		singleton.alreadyReadFile = false
 	})
 	return singleton
