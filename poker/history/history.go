@@ -100,7 +100,7 @@ func (h *History) SetFilename(newFilename string) {
 func GetHistory() *History {
 	once.Do(func() {
 		singleton = &History{}
-		singleton.filename = "poker/history/historyFile.txt"
+		singleton.filename = "poker/history/data/historyFile.txt"
 		singleton.alreadyReadFile = false
 	})
 	return singleton
